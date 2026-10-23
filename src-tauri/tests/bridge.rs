@@ -72,12 +72,7 @@ async fn send(env: &Env, origin: Option<&str>, client: Option<&str>, body: Value
     if let Some(client) = client {
         req = req.header("x-byterush-ext", client);
     }
-    let resp = req
-        .header("content-type", "application/json")
-        .body(body.to_string())
-        .send()
-        .await
-        .unwrap();
+    let resp = req.header("content-type", "application/json").body(body.to_string()).send().await.unwrap();
     let status = StatusCode::from_u16(resp.status().as_u16()).unwrap();
     (status, serde_json::from_str(&resp.text().await.unwrap()).unwrap_or(Value::Null))
 }
@@ -215,21 +210,19 @@ async fn expired_link_is_continued_from_the_browser() {
         .unwrap();
     wait_status(m, &id, Status::Downloading).await;
     tokio::time::sleep(Duration::from_millis(700)).await;
-    m.pause(&[id.clone()]);
+    m.pause(std::slice::from_ref(&id));
     tokio::time::sleep(Duration::from_millis(300)).await;
     let progress = m.get(&id).unwrap().downloaded;
     assert!(progress > 0);
 
     // the link expires: resuming reports it plainly and keeps the progress
     expired.store(true, Ordering::SeqCst);
-    m.resume(&[id.clone()]);
+    m.resume(std::slice::from_ref(&id));
     let failed = wait_status(m, &id, Status::Error).await;
     assert!(failed.record.error.as_deref().unwrap_or("").contains("403"), "{:?}", failed.record.error);
     assert_eq!(failed.downloaded, progress);
 
-    let body = |url: String| {
-        json!({ "url": url, "file_name": "big.bin", "mime": "application/octet-stream", "size": data.len(), "headers": [], "source": "capture" })
-    };
+    let body = |url: String| json!({ "url": url, "file_name": "big.bin", "mime": "application/octet-stream", "size": data.len(), "headers": [], "source": "capture" });
     // a bot check from the browser's new link must not touch the existing download
     let (_, verdict) = hand_over(&env, EXT_ORIGIN, body(format!("{site}/challenge/big.bin"))).await;
     assert_eq!(verdict["accepted"], false, "{verdict}");

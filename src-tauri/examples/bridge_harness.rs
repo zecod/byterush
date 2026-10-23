@@ -54,11 +54,8 @@ async fn app(out: PathBuf) {
 }
 
 async fn site(dir: PathBuf, port: u16) {
-    let app = axum::Router::new()
-        .route("/page.html", get(page))
-        .route("/f/{name}", get(plain))
-        .route("/gz/{name}", get(gzipped))
-        .with_state(dir);
+    let app =
+        axum::Router::new().route("/page.html", get(page)).route("/f/{name}", get(plain)).route("/gz/{name}", get(gzipped)).with_state(dir);
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", port)).await.unwrap();
     println!("READY");
     axum::serve(listener, app).await.unwrap();

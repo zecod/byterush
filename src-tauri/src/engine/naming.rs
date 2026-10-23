@@ -60,10 +60,7 @@ pub fn looks_like_download(text: &str) -> bool {
 
 /// Make a name safe for Windows/Unix filesystems.
 pub fn sanitize(name: &str) -> String {
-    let cleaned: String = name
-        .chars()
-        .map(|c| if c.is_control() || r#"<>:"/\|?*"#.contains(c) { '_' } else { c })
-        .collect();
+    let cleaned: String = name.chars().map(|c| if c.is_control() || r#"<>:"/\|?*"#.contains(c) { '_' } else { c }).collect();
     let cleaned = cleaned.trim().trim_end_matches(['.', ' ']).to_string();
     let cleaned: String = cleaned.chars().take(200).collect();
     if cleaned.is_empty() { "download".into() } else { cleaned }
@@ -93,7 +90,7 @@ pub fn from_content_disposition(value: &str) -> Option<String> {
 }
 
 pub fn from_url(url: &url::Url) -> Option<String> {
-    let last = url.path_segments()?.filter(|s| !s.is_empty()).next_back()?;
+    let last = url.path_segments()?.rfind(|s| !s.is_empty())?;
     let decoded = percent_decode_str(last).decode_utf8_lossy().to_string();
     (!decoded.is_empty()).then_some(decoded)
 }
@@ -108,10 +105,7 @@ pub fn unique_path(dir: &Path, name: &str, reserved: &HashSet<PathBuf>) -> PathB
     let path = Path::new(name);
     let stem = path.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
     let ext = path.extension().map(|e| format!(".{}", e.to_string_lossy())).unwrap_or_default();
-    (1..)
-        .map(|n| dir.join(format!("{stem} ({n}){ext}")))
-        .find(|p| !taken(p))
-        .expect("infinite iterator")
+    (1..).map(|n| dir.join(format!("{stem} ({n}){ext}"))).find(|p| !taken(p)).expect("infinite iterator")
 }
 
 /// Temporary file used while downloading.

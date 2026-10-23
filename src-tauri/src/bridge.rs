@@ -102,10 +102,7 @@ fn with_cors(origin: Option<HeaderValue>, body: impl IntoResponse) -> Response {
 
 async fn ping(State(bridge): State<Bridge>, headers: HeaderMap) -> Response {
     let Some(origin) = authorized(&headers) else { return StatusCode::FORBIDDEN.into_response() };
-    with_cors(
-        origin,
-        Json(Ping { app: "byterush", version: env!("CARGO_PKG_VERSION"), capture: bridge.manager.browser_integration() }),
-    )
+    with_cors(origin, Json(Ping { app: "byterush", version: env!("CARGO_PKG_VERSION"), capture: bridge.manager.browser_integration() }))
 }
 
 async fn preflight(headers: HeaderMap) -> Response {
