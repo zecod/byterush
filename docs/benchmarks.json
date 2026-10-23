@@ -1,0 +1,186 @@
+{
+  "measured": "2026-10-23",
+  "machine": "Linux datacenter VM, 4 vCPU; one connection to a nearby server reaches ~70 MB/s",
+  "method": "scripts/bench.sh: the same file downloaded with curl (one connection, like a browser) and with Byterush at 8, 16 and 32 connections; wall-clock time for the whole download, two runs per setting, all within the same evening",
+  "files": [
+    {
+      "id": "sintel",
+      "title": "961 MB video",
+      "file": "Sintel_Documentary_by_Ali_Boubred.avi",
+      "url": "https://archive.org/download/Sintel/Sintel_Documentary_by_Ali_Boubred.avi",
+      "server": "archive.org",
+      "bytes": 961242162,
+      "runs": [
+        {
+          "connections": 1,
+          "seconds": [
+            462.57,
+            365.95
+          ]
+        },
+        {
+          "connections": 8,
+          "seconds": [
+            22.52,
+            34.26
+          ]
+        },
+        {
+          "connections": 16,
+          "seconds": [
+            22.29,
+            23.33
+          ]
+        },
+        {
+          "connections": 32,
+          "seconds": [
+            13.76,
+            13.23
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ed360",
+      "title": "3.6 GB archive",
+      "file": "ED-360-png.tar",
+      "url": "https://archive.org/download/ElephantsDream/ED-360-png.tar",
+      "server": "archive.org",
+      "bytes": 3569858560,
+      "note": "one run per setting; the single connection was reset by the server after 32 min 13 s with 3.46 of 3.57 GB (97%), so its time is a lower bound",
+      "runs": [
+        {
+          "connections": 1,
+          "seconds": [
+            1933.0
+          ],
+          "incomplete": 0.969
+        },
+        {
+          "connections": 32,
+          "seconds": [
+            32.67
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bbb",
+      "title": "62 MB video",
+      "file": "big_buck_bunny_720p_surround.mp4",
+      "url": "https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4",
+      "server": "archive.org",
+      "bytes": 61878609,
+      "runs": [
+        {
+          "connections": 1,
+          "seconds": [
+            44.6,
+            53.12
+          ]
+        },
+        {
+          "connections": 8,
+          "seconds": [
+            9.72,
+            11.39
+          ]
+        },
+        {
+          "connections": 16,
+          "seconds": [
+            7.11,
+            10.09
+          ]
+        },
+        {
+          "connections": 32,
+          "seconds": [
+            5.88,
+            6.05
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hetzner1g",
+      "title": "1 GB test file",
+      "file": "1GB.bin",
+      "url": "https://nbg1-speed.hetzner.com/1GB.bin",
+      "server": "Hetzner Nuremberg",
+      "bytes": 1073741824,
+      "note": "a server that doesn't limit connections; one run per setting",
+      "runs": [
+        {
+          "connections": 1,
+          "seconds": [
+            28.92
+          ]
+        },
+        {
+          "connections": 16,
+          "seconds": [
+            5.98
+          ]
+        },
+        {
+          "connections": 32,
+          "seconds": [
+            6.53
+          ]
+        }
+      ]
+    }
+  ],
+  "other": [
+    {
+      "server": "(small files)",
+      "note": "100 MB files from Hetzner gain only 1.4-1.5x: the per-request overhead weighs more on short downloads"
+    },
+    {
+      "server": "Hetzner Singapore",
+      "bytes": 104857600,
+      "one": [
+        7.83,
+        7.52
+      ],
+      "sixteen": [
+        5.44,
+        4.76
+      ],
+      "note": "server doesn't limit connections: 1.5x"
+    },
+    {
+      "server": "Hetzner Nuremberg",
+      "bytes": 104857600,
+      "one": [
+        3.75,
+        3.72
+      ],
+      "sixteen": [
+        3.01,
+        2.41
+      ],
+      "note": "1.4x"
+    },
+    {
+      "server": "Hetzner Ashburn",
+      "bytes": 104857600,
+      "one": [
+        1.41
+      ],
+      "sixteen": [
+        1.93
+      ],
+      "note": "one connection already fills the line: no gain"
+    }
+  ],
+  "many_files": {
+    "files": 500,
+    "size_kb": 48,
+    "max_active": 3,
+    "seconds": 0.36,
+    "note": "examples/bench_many against a local server"
+  }
+}

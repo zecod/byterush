@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="822" viewBox="0 0 900 822" role="img" aria-label="Download time, one connection against Byterush">
+<rect width="900" height="822" fill="#0d1117"/>
+<rect x="246" y="22" width="14" height="14" rx="3" fill="#4f8fdc"/>
+<text x="268" y="34" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">one connection (how browsers download)</text>
+<rect x="606" y="22" width="14" height="14" rx="3" fill="#949d18"/>
+<text x="628" y="34" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">Byterush</text>
+<text x="16" y="76" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" fill="#f0f6fc">961 MB video · archive.org</text>
+<text x="16" y="96" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#9198a1">Sintel_Documentary_by_Ali_Boubred.avi</text>
+<line x1="246" y1="106" x2="246" y2="240" stroke="#3d444d" stroke-width="1"/>
+<text x="234" y="127" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">1 connection</text>
+<path d="M246 112 h424 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-424 z" fill="#4f8fdc"><title>1 connection: 6 min 54 s (2.3 MB/s)</title></path>
+<text x="684" y="127" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">6 min 54 s</text>
+<text x="884" y="127" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#9198a1">baseline</text>
+<text x="234" y="161" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">Byterush · 8</text>
+<path d="M246 146 h25.331627480326365 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-25.331627480326365 z" fill="#949d18"><title>Byterush · 8: 28.4 s (33.9 MB/s)</title></path>
+<text x="285.33162748032635" y="161" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">28.4 s</text>
+<text x="884" y="161" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f0f6fc">14.6× faster</text>
+<text x="234" y="195" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">Byterush · 16</text>
+<path d="M246 180 h19.566552406701103 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-19.566552406701103 z" fill="#949d18"><title>Byterush · 16: 22.8 s (42.1 MB/s)</title></path>
+<text x="279.5665524067011" y="195" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">22.8 s</text>
+<text x="884" y="195" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f0f6fc">18.2× faster</text>
+<text x="234" y="229" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">Byterush · 32</text>
+<path d="M246 214 h9.94259643702023 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-9.94259643702023 z" fill="#949d18"><title>Byterush · 32: 13.5 s (71.2 MB/s)</title></path>
+<text x="269.94259643702026" y="229" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">13.5 s</text>
+<text x="884" y="229" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f0f6fc">30.7× faster</text>
+<text x="16" y="286" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" fill="#f0f6fc">3.6 GB archive · archive.org</text>
+<text x="16" y="306" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#9198a1">ED-360-png.tar · one connection was reset by the server at 97%, so its time is a lower bound</text>
+<line x1="246" y1="316" x2="246" y2="382" stroke="#3d444d" stroke-width="1"/>
+<text x="234" y="337" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">1 connection</text>
+<path d="M246 322 h424 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-424 z" fill="#4f8fdc"><title>1 connection: 32 min 13 s (1.8 MB/s)</title></path>
+<text x="684" y="337" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">> 32 min 13 s</text>
+<text x="884" y="337" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#9198a1"></text>
+<text x="234" y="371" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">Byterush · 32</text>
+<path d="M246 356 h3.233709260217279 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-3.233709260217279 z" fill="#949d18"><title>Byterush · 32: 32.7 s (109.3 MB/s)</title></path>
+<text x="263.23370926021727" y="371" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">32.7 s</text>
+<text x="884" y="371" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f0f6fc">≥ 59.2× faster</text>
+<text x="16" y="428" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" fill="#f0f6fc">62 MB video · archive.org</text>
+<text x="16" y="448" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#9198a1">big_buck_bunny_720p_surround.mp4</text>
+<line x1="246" y1="458" x2="246" y2="592" stroke="#3d444d" stroke-width="1"/>
+<text x="234" y="479" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">1 connection</text>
+<path d="M246 464 h424 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-424 z" fill="#4f8fdc"><title>1 connection: 48.9 s (1.3 MB/s)</title></path>
+<text x="684" y="479" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">48.9 s</text>
+<text x="884" y="479" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#9198a1">baseline</text>
+<text x="234" y="513" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">Byterush · 8</text>
+<path d="M246 498 h88.4588620548506 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-88.4588620548506 z" fill="#949d18"><title>Byterush · 8: 10.6 s (5.9 MB/s)</title></path>
+<text x="348.4588620548506" y="513" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">10.6 s</text>
+<text x="884" y="513" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f0f6fc">4.6× faster</text>
+<text x="234" y="547" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">Byterush · 16</text>
+<path d="M246 532 h71.33360622185837 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-71.33360622185837 z" fill="#949d18"><title>Byterush · 16: 8.6 s (7.2 MB/s)</title></path>
+<text x="331.33360622185836" y="547" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">8.6 s</text>
+<text x="884" y="547" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f0f6fc">5.7× faster</text>
+<text x="234" y="581" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">Byterush · 32</text>
+<path d="M246 566 h48.25173966434711 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-48.25173966434711 z" fill="#949d18"><title>Byterush · 32: 6.0 s (10.4 MB/s)</title></path>
+<text x="308.2517396643471" y="581" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">6.0 s</text>
+<text x="884" y="581" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f0f6fc">8.2× faster</text>
+<text x="16" y="638" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" font-weight="700" fill="#f0f6fc">1 GB test file · Hetzner Nuremberg</text>
+<text x="16" y="658" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#9198a1">1GB.bin</text>
+<line x1="246" y1="668" x2="246" y2="768" stroke="#3d444d" stroke-width="1"/>
+<text x="234" y="689" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">1 connection</text>
+<path d="M246 674 h424 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-424 z" fill="#4f8fdc"><title>1 connection: 28.9 s (37.1 MB/s)</title></path>
+<text x="684" y="689" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">28.9 s</text>
+<text x="884" y="689" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#9198a1">baseline</text>
+<text x="234" y="723" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">Byterush · 16</text>
+<path d="M246 708 h84.50069156293223 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-84.50069156293223 z" fill="#949d18"><title>Byterush · 16: 6.0 s (179.6 MB/s)</title></path>
+<text x="344.5006915629322" y="723" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">6.0 s</text>
+<text x="884" y="723" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f0f6fc">4.8× faster</text>
+<text x="234" y="757" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">Byterush · 32</text>
+<path d="M246 742 h92.64038727524205 a4 4 0 0 1 4 4 v12 a4 4 0 0 1 -4 4 h-92.64038727524205 z" fill="#949d18"><title>Byterush · 32: 6.5 s (164.4 MB/s)</title></path>
+<text x="352.64038727524206" y="757" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" fill="#f0f6fc">6.5 s</text>
+<text x="884" y="757" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="700" fill="#f0f6fc">4.4× faster</text>
+<text x="16" y="810" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" fill="#9198a1">Shorter is faster. Two runs per setting unless noted, 2026-10-23. Data: docs/benchmarks.json</text>
+</svg>
