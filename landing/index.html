@@ -4,46 +4,56 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="description" content="Byterush is a free download manager for Windows, macOS and Linux. It splits every download across parallel connections and takes over downloads from your browser." />
+    <meta name="description" content="Byterush is a free, open-source download manager for Windows, macOS and Linux. It splits every file across parallel connections, resumes after restarts and crashes, and takes over your browser's downloads with the same session." />
+    <meta property="og:title" content="Byterush, the free parallel download manager" />
+    <meta property="og:description" content="Parallel connections, resume after restarts, and browser downloads handed over with the same session. Free and open source for Windows, macOS and Linux." />
+    <meta property="og:type" content="website" />
     <title>Byterush | The free parallel download manager</title>
     <link rel="icon" type="image/svg+xml" href="assets/icon-16.svg" />
     <link rel="preload" href="assets/fonts/plex-mono-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="assets/fonts/plex-mono-700.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="styles.css" />
     <script src="main.js" defer></script>
   </head>
   <body>
-    <main>
-      <div class="frame">
-        <header class="top">
-          <a class="logo" href="#" aria-label="Byterush home">
-            <img src="assets/icon.svg" alt="" width="30" height="30" />
-            <span><span class="logo-dim">byte</span>rush</span>
-          </a>
-          <nav class="nav" id="nav" aria-label="Main">
-            <ul>
-              <li><a href="#" data-link="github">GitHub</a></li>
-              <li><a href="#features">Features</a></li>
-              <li><a href="#extension">Extension</a></li>
-              <li><a href="#faq">FAQ</a></li>
-              <li><a class="button button-solid" href="#" data-link="releases"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg>Download</a></li>
-            </ul>
-          </nav>
-          <button class="menu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5h11M2.5 11h11"/></svg>
-          </button>
-        </header>
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="frame">
+      <header class="top">
+        <a class="logo" href="#top" aria-label="Byterush, back to top">
+          <img src="assets/icon.svg" alt="" width="30" height="30" />
+          <span><span class="logo-dim">byte</span>rush</span>
+        </a>
+        <nav class="nav" id="nav" aria-label="Main">
+          <ul>
+            <li><a href="#speed">Speed</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#extension">Extension</a></li>
+            <li><a href="#faq">FAQ</a></li>
+            <li><a href="https://github.com/zecod/byterush" data-link="github">GitHub</a></li>
+            <li><a class="button button-solid" href="#download"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg>Download</a></li>
+          </ul>
+        </nav>
+        <button class="menu" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5h11M2.5 11h11"/></svg>
+        </button>
+      </header>
 
-        <section class="hero">
-          <h1>The free parallel download manager</h1>
-          <p>Splits every download across up to 32 connections and takes over downloads from your browser. For Windows, macOS and Linux.</p>
+      <main id="main">
+        <section class="hero" id="top" aria-labelledby="hero-title">
+          <a class="chip" href="#speed" data-bench-chip hidden><span class="chip-mark" data-bench-chip-factor></span><span data-bench-chip-text></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4"/></svg></a>
+          <h1 id="hero-title">The free parallel<br class="br-wide" /> download manager</h1>
+          <p class="hero-sub">Byterush splits every file across up to 32 connections, picks up where it stopped after a restart or a crash, and takes over the downloads your browser starts, with the same session, so protected sites keep working.</p>
           <div class="hero-actions">
-            <a class="button button-solid button-big" href="#" data-link="releases" data-os-label><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg><span>Download for Windows</span></a>
-            <a class="button button-ghost button-big" href="#" data-link="github">View on GitHub <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4"/></svg></a>
+            <a class="button button-solid button-big" href="https://github.com/zecod/byterush/releases/latest" data-dl-primary>
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg><span data-dl-label>Download</span><span class="button-meta" data-dl-arch></span>
+            </a>
+            <a class="button button-ghost button-big" href="https://github.com/zecod/byterush" data-link="github">View on GitHub <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4"/></svg></a>
           </div>
-          <p class="hero-note">Free · Windows, macOS and Linux · No account</p>
+          <p class="hero-meta"><span data-dl-meta>Free and open source · Windows, macOS and Linux</span><span class="dot-sep" aria-hidden="true">·</span><a class="underline" href="#download">Other platforms</a></p>
+          <p class="hero-alt" data-dl-alt hidden></p>
         </section>
 
-        <section class="band" aria-label="The Byterush desktop app downloading a file">
+        <figure class="band" aria-label="The Byterush desktop app downloading a file over eight connections">
           <div class="stage" data-stage>
             <div class="win" aria-hidden="true">
               <div class="w-title">
@@ -62,7 +72,7 @@
                   <div class="w-tools">
                     <span class="w-add">+ add url</span>
                     <span class="w-icons"><svg viewBox="0 0 16 16"><path d="M5 3.5v9l7-4.5z"/></svg><svg viewBox="0 0 16 16"><path d="M5.5 3.5v9M10.5 3.5v9"/></svg><svg viewBox="0 0 16 16"><path d="M3 4.5h10M6 4.5V3h4v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5"/></svg></span>
-                    <span class="w-count">3 items · <b>1 active</b></span>
+                    <span class="w-count">4 items · <b>1 active</b></span>
                   </div>
                   <div class="w-head"><span>name</span><span>size</span><span>progress</span><span>speed</span></div>
                   <div class="w-row is-active">
@@ -78,6 +88,12 @@
                     <span class="w-speed"></span>
                   </div>
                   <div class="w-row">
+                    <span class="w-file"><i class="w-ficon"></i><span><b>kdenlive-25.08.1-x86_64.AppImage</b><small>download.kde.org</small></span></span>
+                    <span class="w-size">212 MB</span>
+                    <span class="w-prog"><span class="w-blocks" data-fixed="10"></span><span class="w-state"><span>paused</span><span>41.2%</span></span></span>
+                    <span class="w-speed"></span>
+                  </div>
+                  <div class="w-row">
                     <span class="w-file"><i class="w-ficon"></i><span><b>debian-13.1.0-amd64-netinst.iso</b><small>cdimage.debian.org</small></span></span>
                     <span class="w-size">754 MB</span>
                     <span class="w-prog"><span class="w-blocks"></span><span class="w-state"><span>queued</span><span></span></span></span>
@@ -85,107 +101,361 @@
                   </div>
                   <div class="w-details">
                     <div class="w-dname">ubuntu-26.10-desktop-amd64.iso</div>
-                    <div class="w-dmeta"><span>● downloading</span><b data-d-speed>36.6 MB/s</b><span data-d-bytes>2.14 GB / 6.16 GB · 34.7%</span><span data-d-eta>1m 50s left</span><span>8 connections</span></div>
-                    <div class="w-fig">Fig 2. split — 8 ranges over 8 connections</div>
-                    <div class="w-ranges" data-ranges><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                    <div class="w-dmeta"><span data-d-state>● downloading</span><b data-d-speed>36.6 MB/s</b><span data-d-bytes>2.14 GB / 6.16 GB · 34.7%</span><span data-d-eta>1m 50s left</span><span data-d-conns>8 connections</span></div>
+                    <div class="w-fig" data-d-fig>Fig 2. split — 8 ranges over 8 connections</div>
+                    <div class="w-map" data-band-map></div>
                     <dl class="w-info">
                       <dt>url</dt><dd>https://ftp.riken.jp/Linux/ubuntu-releases/26.10/ubuntu-26.10-desktop-amd64.iso</dd>
-                      <dt>save to</dt><dd>~/Downloads</dd>
+                      <dt>save to</dt><dd>~/Downloads/Programs</dd>
                       <dt>storage</dt><dd>single file · written in place</dd>
-                      <dt>resume</dt><dd>supported · parallel ranges</dd>
+                      <dt>resume</dt><dd>supported · checkpointed to disk</dd>
                     </dl>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </section>
+          <figcaption class="band-cap">Fig 1. One file, eight connections. The bar at the bottom is the file itself: each range belongs to a connection, and a connection that finishes takes half of the biggest range left.</figcaption>
+        </figure>
 
-        <section class="block" id="features">
-          <h3>What is Byterush?</h3>
-          <p>Byterush is a free desktop app that downloads each file over many connections at once, and picks up the downloads your browser starts.</p>
-          <ul class="stars named">
-            <li><span class="star">[*]</span><div><strong>Parallel ranges</strong> Up to 32 connections per file; a free connection takes over half of the slowest range</div></li>
-            <li><span class="star">[*]</span><div><strong>Resume anything</strong> Pause and pick up again, even after a restart</div></li>
-            <li><span class="star">[*]</span><div><strong>Browser hand-off</strong> The extension passes downloads over with your cookies and session</div></li>
-            <li><span class="star">[*]</span><div><strong>Protected sites</strong> Works behind “verify you're human” pages, and the browser keeps the file if it can't</div></li>
-            <li><span class="star">[*]</span><div><strong>Queue and limits</strong> Downloads at a time, a speed cap, or “download later”</div></li>
-            <li><span class="star">[*]</span><div><strong>Tidy folders</strong> Video, music, documents, archives and programs sorted for you</div></li>
-            <li><span class="star">[*]</span><div><strong>Every desktop</strong> Windows, macOS and Linux, built with Rust and Tauri</div></li>
-          </ul>
-          <a class="button button-solid" href="#" data-link="github">View on GitHub <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4"/></svg></a>
-        </section>
+        <!-- 01 speed -->
+        <section class="block" id="speed" aria-labelledby="speed-title">
+          <p class="kicker"><span aria-hidden="true">[*]</span> 01 · speed</p>
+          <h2 id="speed-title">How much faster?</h2>
+          <p class="lead" data-bench-lead>A browser downloads each file over one connection. Byterush opens several and splits the file between them.</p>
+          <noscript><p class="lead">The measured results below are drawn with JavaScript. Turn it on to see them, or read them in <code>main.js</code> on GitHub.</p></noscript>
 
-        <section class="block">
-          <h3>Faster where it matters</h3>
-          <ul class="stars">
-            <li><span class="star">[*]</span><div>Many mirrors and file hosts cap the speed of each connection. Fetching the <strong>6.6 GB</strong> Ubuntu 26.10 ISO from a mirror in Japan, Chrome's single connection averaged <strong>8 MB/s</strong>. Byterush finished in <strong>3 minutes</strong>; at Chrome's pace it takes about <strong>12½</strong>.</div></li>
-          </ul>
-          <div class="figures">
-            <figure>
-              <svg viewBox="0 0 160 120" class="fig-lines" aria-hidden="true"></svg>
-              <figcaption>Fig 1. <strong>32</strong> connections</figcaption>
-            </figure>
-            <figure>
-              <svg viewBox="0 0 160 120" class="fig-curve" aria-hidden="true">
-                <defs><pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" /></pattern></defs>
-                <path class="curve-fill" d="M2 118 C40 116 52 110 66 96 S86 50 104 34 S140 6 158 2 L158 118 Z" />
-                <path class="curve-line" d="M2 118 C40 116 52 110 66 96 S86 50 104 34 S140 6 158 2" />
-              </svg>
-              <figcaption>Fig 2. <strong>4×</strong> faster</figcaption>
-            </figure>
-            <figure>
-              <svg viewBox="0 0 160 120" class="fig-dots" aria-hidden="true"></svg>
-              <figcaption>Fig 3. <strong>0</strong> trackers</figcaption>
-            </figure>
+          <div class="stats" data-bench-stats></div>
+
+          <figure class="race" data-race>
+            <div class="race-head">
+              <span class="fig" data-race-title>Fig 2. the same file, downloaded several ways</span>
+              <span class="race-ctl">
+                <span class="race-clock" data-race-clock aria-hidden="true"></span>
+                <button class="button button-ghost button-small" type="button" data-race-replay hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7M3 2.5v2.5h2.5"/></svg>Replay</button>
+              </span>
+            </div>
+            <p class="sample" data-bench-sample hidden><span aria-hidden="true">[!]</span> Sample numbers. These are stand-ins until the benchmark is run; they are not a measurement.</p>
+            <div class="race-lanes" data-race-lanes aria-hidden="true"></div>
+            <figcaption class="race-foot" data-bench-method></figcaption>
+          </figure>
+
+          <div class="table-wrap">
+            <table class="results" data-bench-table>
+              <caption class="sr-only">Benchmark results for each run</caption>
+              <thead><tr><th scope="col">Run</th><th scope="col">Time</th><th scope="col">Average speed</th><th scope="col">vs. browser</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="why">
+            <h3>Why more connections help</h3>
+            <ul class="stars">
+              <li><span class="star" aria-hidden="true">[*]</span><div><strong>Servers cap each connection.</strong> Mirrors, file hosts and CDNs often limit how fast a single connection may go. Four connections get four allowances.</div></li>
+              <li><span class="star" aria-hidden="true">[*]</span><div><strong>Distance slows one connection down.</strong> A TCP connection only sends so much before it waits for an answer, so the farther away the server, the slower one connection runs, however fast your line is.</div></li>
+              <li><span class="star" aria-hidden="true">[*]</span><div><strong>Ranges add up to the full line.</strong> Byterush asks for different byte ranges of the same file at once and writes each one straight into place, so together they fill the bandwidth you pay for.</div></li>
+              <li><span class="star" aria-hidden="true">[*]</span><div><strong>Nobody waits at the end.</strong> When a connection finishes its range, it takes half of the largest range still left, so all of them stay busy until the last byte.</div></li>
+            </ul>
+            <p class="note"><span aria-hidden="true">[i]</span> The gain is largest on slow, busy or distant servers. When one connection already fills your line, for example a fast CDN nearby, Byterush can't beat your own bandwidth and the times come out about the same.</p>
           </div>
         </section>
 
-        <section class="block" id="extension">
-          <h3>Your browser starts it. Byterush finishes it.</h3>
-          <ul class="stars">
-            <li><span class="star">[*]</span><div>The extension catches downloads in Chrome, Edge and Brave: clicks, scripts, redirects and server-named files. It hands them over with the browser's cookies, user agent and referer, so sign-ins and bot checks carry over. If Byterush can't get the exact same file, the browser simply keeps it.</div></li>
+        <!-- 02 features -->
+        <section class="block" id="features" aria-labelledby="features-title">
+          <p class="kicker"><span aria-hidden="true">[*]</span> 02 · features</p>
+          <h2 id="features-title">Everything a download manager should do</h2>
+          <p class="lead">Fast when the server allows it, careful when it doesn't, and quiet the rest of the time.</p>
+          <ul class="features">
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 15V8M9.5 15V5M14 15V8M18.5 15V11M3 19h18"/></svg></span>
+              <h3>Up to 32 connections</h3>
+              <p>Each file is split into ranges that download side by side and are written straight into place. Eight by default, up to 32 per file.</p>
+              <span class="tag">speed</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 8h18v8H3zM12 8v8M16.5 8v8"/><path d="M7.5 4.5 12 7M12 7l-1.2-2.6M12 7l-2.8.2"/></svg></span>
+              <h3>Re-splits as it goes</h3>
+              <p>A connection that finishes early takes over half of the largest range still left, so every connection stays busy to the last byte.</p>
+              <span class="tag">speed</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19.5 12A7.5 7.5 0 1 1 17 6.4"/><path d="M19 3v4h-4"/><path d="M10 9.5v5M14 9.5v5"/></svg></span>
+              <h3>Survives restarts and crashes</h3>
+              <p>Pause anything. Progress is checkpointed to disk, so after a quit, a reboot or a crash, downloads carry on by themselves when Byterush starts. Dropped connections retry with backoff.</p>
+              <span class="tag">resume</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="15" rx="1.5"/><path d="M3 8h18M12 11v5m0 0-2.5-2.5M12 16l2.5-2.5"/></svg></span>
+              <h3>Takes over browser downloads</h3>
+              <p>The Chrome and Edge extension hands each download over with the browser's cookies, user agent and referer, so sign-ins and “verify you're human” checks carry over.</p>
+              <span class="tag">browser</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 14a3.5 3.5 0 0 0 5 0l3.5-3.5a3.5 3.5 0 0 0-5-5L12.5 6.5"/><path d="M14 10a3.5 3.5 0 0 0-5 0l-3.5 3.5a3.5 3.5 0 0 0 5 5l1-1"/></svg></span>
+              <h3>Expired link? Click it again</h3>
+              <p>If a download paused or failed because its link expired, click the link again in the browser. Byterush picks up the fresh link and continues where it stopped, not from zero.</p>
+              <span class="tag">browser</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.4-2.9 8-7 10-4.1-2-7-5.6-7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span>
+              <h3>Never loses a download</h3>
+              <p>Byterush only takes over when the server sends it the exact same file. If not, the browser keeps its download as if nothing happened.</p>
+              <span class="tag">browser</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h11M4 11h11M4 16h6"/><circle cx="17" cy="16" r="4"/><path d="M17 14v2l1.3 1.3"/></svg></span>
+              <h3>Queue and “download later”</h3>
+              <p>Choose how many downloads run at once (three by default) and the rest wait their turn. Park anything for later and start it when it suits you.</p>
+              <span class="tag">queue</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 16a8 8 0 1 1 16 0"/><path d="m12 16 3.5-4.5"/><path d="M3 20h18"/></svg></span>
+              <h3>Global speed cap</h3>
+              <p>One limit for every download, switched on from the toolbar, so video calls and streams in the house stay smooth.</p>
+              <span class="tag">queue</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M7 11h10M7 15h6"/></svg></span>
+              <h3>Sorted into folders</h3>
+              <p>Video, music, documents, archives and programs each land in their own folder, without you picking one every time.</p>
+              <span class="tag">files</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1"/><path d="M17.25 14v6M14.5 15.5l5.5 3M14.5 18.5l5.5-3"/></svg></span>
+              <h3>Batch downloads</h3>
+              <p><code>site.com/img*.jpg</code> with a number range and zero padding queues <code>img001.jpg</code> to <code>img250.jpg</code> in one go.</p>
+              <span class="tag">files</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4.5" width="14" height="16.5" rx="1.5"/><path d="M9 4.5V3h6v1.5M8.5 10h7M8.5 14h4.5"/></svg></span>
+              <h3>Clipboard monitor</h3>
+              <p>Copy a link to a file anywhere and Byterush offers to download it. No pasting, no switching windows.</p>
+              <span class="tag">files</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="1.5"/><path d="M6.5 12h6"/><circle cx="17" cy="12" r="1"/></svg></span>
+              <h3>Temporary folder on a fast drive</h3>
+              <p>Partial files can live on an SSD while they download. Finished files move to their folder, copied across drives when needed.</p>
+              <span class="tag">files</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4.5h16M4 9h16M4 13.5h16M4 18h10"/><path d="M18 16v5m0 0-2-2m2 2 2-2"/></svg></span>
+              <h3>Thousands of files</h3>
+              <p>A virtualized list that only redraws the rows that changed stays smooth with thousands of downloads, and a whole batch is queued in one call.</p>
+              <span class="tag">scale</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" class="fill"/></svg></span>
+              <h3>Light and dark</h3>
+              <p>Follows your system theme, in the same plain monospace look as this page.</p>
+              <span class="tag">look</span>
+            </li>
+            <li class="feat">
+              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="1.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3M12 14.5v2"/></svg></span>
+              <h3>No account, no telemetry</h3>
+              <p>Nothing to sign up for and nothing sent home. The bridge for the browser extension only listens on <code>127.0.0.1</code>.</p>
+              <span class="tag">privacy</span>
+            </li>
           </ul>
-          <a class="button button-ghost" href="#" data-link="extension">Get the extension <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4"/></svg></a>
         </section>
 
-        <section class="block">
-          <h3>Built for privacy first</h3>
-          <ul class="stars">
-            <li><span class="star">[*]</span><div>Byterush runs entirely on your computer. The extension only talks to the app on <code>127.0.0.1</code>, and there are no accounts or analytics. Read the <a class="underline" href="#" data-link="github">source code</a>.</div></li>
-          </ul>
+        <!-- 03 how it works -->
+        <section class="block" id="how" aria-labelledby="how-title">
+          <p class="kicker"><span aria-hidden="true">[*]</span> 03 · how it works</p>
+          <h2 id="how-title">One file, many ranges, no idle connections</h2>
+          <p class="lead">Byterush asks the server for different parts of the same file at once. Here is a 4 GB file over eight connections.</p>
+
+          <figure class="split" data-split>
+            <div class="split-head">
+              <span class="fig" data-split-fig>Fig 3. split — 8 ranges over 8 connections</span>
+              <span class="split-status" data-split-status></span>
+            </div>
+            <div class="fb" data-split-bar aria-hidden="true"></div>
+            <div class="fb-axis" aria-hidden="true"><span>0</span><span>1 GB</span><span>2 GB</span><span>3 GB</span><span>4 GB</span></div>
+            <ol class="split-log" data-split-log aria-hidden="true"></ol>
+            <figcaption class="sr-only">An animation of a 4 GB file split into eight equal ranges, one per connection. Connections fill their ranges at different speeds. Each time one finishes, it takes over the second half of the largest range still in progress, until the whole file is complete.</figcaption>
+          </figure>
+
+          <ol class="steps" data-split-steps>
+            <li data-step="probe"><span class="step-n">01</span><div><strong>Probe</strong> The first request already asks for the file. Its answer gives the size, the name and whether the server accepts ranges, with no extra round trip.</div></li>
+            <li data-step="split"><span class="step-n">02</span><div><strong>Split</strong> The file is reserved on disk and divided into equal ranges, one per connection. Servers without range support get a single connection.</div></li>
+            <li data-step="download"><span class="step-n">03</span><div><strong>Download</strong> Every connection writes its bytes straight into place. Progress per range is checkpointed, so a restart resumes each range where it stopped.</div></li>
+            <li data-step="steal"><span class="step-n">04</span><div><strong>Re-split</strong> A connection that finishes early takes the second half of the largest range still in progress. Slow connections stop holding the file back.</div></li>
+            <li data-step="done"><span class="step-n">05</span><div><strong>Done</strong> The ranges meet, the file is complete and sorted into its folder.</div></li>
+          </ol>
         </section>
 
-        <section class="block" id="faq">
-          <h3>FAQ</h3>
+        <!-- 04 extension -->
+        <section class="block" id="extension" aria-labelledby="extension-title">
+          <p class="kicker"><span aria-hidden="true">[*]</span> 04 · browser extension</p>
+          <h2 id="extension-title">Your browser starts it. Byterush finishes it.</h2>
+          <div class="ext">
+            <div class="ext-copy">
+              <p class="lead">The extension for Chrome and Edge watches the browser's downloads and passes them to the app on your computer.</p>
+              <ul class="stars">
+                <li><span class="star" aria-hidden="true">[*]</span><div><strong>Catches every download.</strong> Link clicks, scripts, redirects and files the server names itself.</div></li>
+                <li><span class="star" aria-hidden="true">[*]</span><div><strong>Same session.</strong> It replays the exact cookies, user agent and referer the browser used, so logins and bot checks still pass.</div></li>
+                <li><span class="star" aria-hidden="true">[*]</span><div><strong>Falls back to the browser.</strong> One-time links, form posts and challenge pages stay in the browser. Nothing is lost.</div></li>
+                <li><span class="star" aria-hidden="true">[*]</span><div><strong>Right-click.</strong> “Download with Byterush” on any link, video, audio or image.</div></li>
+                <li><span class="star" aria-hidden="true">[*]</span><div><strong>Per-site switch.</strong> Turn it off for a site that needs the browser, and see recent hand-overs in the popup.</div></li>
+              </ul>
+            </div>
+            <div class="popup" aria-hidden="true">
+              <div class="p-head"><span class="p-brand"><img src="assets/icon-16.svg" alt="" width="18" height="18" />byterush</span><span class="p-status"><i></i>connected · v0.2.0</span></div>
+              <div class="p-sec">
+                <div class="p-row"><span><b>catch downloads</b><small>hand browser downloads to the app</small></span><span class="p-switch on"></span></div>
+                <div class="p-row"><span><b>on <mark>releases.ubuntu.com</mark></b><small>turn off for sites that need the browser</small></span><span class="p-switch on"></span></div>
+              </div>
+              <div class="p-sec">
+                <div class="p-fig">Fig 1. recent hand-overs</div>
+                <ul class="p-list">
+                  <li><span class="p-tag">[taken]</span><span><b>ubuntu-26.10-desktop-amd64.iso</b><small>releases.ubuntu.com</small></span></li>
+                  <li><span class="p-tag dim">[browser]</span><span><b>statement-2026-10.pdf</b><small>one-time link, kept in the browser</small></span></li>
+                  <li><span class="p-tag">[taken]</span><span><b>blender-4.5.0-windows-x64.msi</b><small>download.blender.org</small></span></li>
+                </ul>
+              </div>
+              <div class="p-foot">tip: right-click a link → download with byterush</div>
+            </div>
+          </div>
+
+          <figure class="handoff">
+            <figcaption class="fig">Fig 4. the hand-over, step by step</figcaption>
+            <ol class="flow">
+              <li><span class="node">browser</span><span>A download starts: a click, a script or a redirect.</span></li>
+              <li><span class="node">extension</span><span>Holds the browser's copy and sends the link, cookies, user agent and referer to <code>127.0.0.1</code>.</span></li>
+              <li><span class="node">byterush</span><span>Opens the first connection with the same session and checks what comes back.</span></li>
+            </ol>
+            <div class="branches">
+              <div class="branch yes"><span class="branch-k">same file</span><p>The browser's copy is cancelled and Byterush downloads it over all its connections.</p></div>
+              <div class="branch no"><span class="branch-k">anything else</span><p>A challenge page, a different size or a one-time link: the browser simply carries on with its own download.</p></div>
+            </div>
+          </figure>
+
+          <h3 class="sub">Install the extension</h3>
+          <ol class="install">
+            <li><span class="step-n">01</span><div>Install Byterush and open <strong>Settings → browser → open folder</strong>. That is the <code>extension</code> folder shipped with the app.</div></li>
+            <li><span class="step-n">02</span><div>In Chrome go to <code>chrome://extensions</code> (in Edge, <code>edge://extensions</code>) and switch on <strong>Developer mode</strong>.</div></li>
+            <li><span class="step-n">03</span><div>Click <strong>Load unpacked</strong> and choose the <code>extension</code> folder.</div></li>
+            <li><span class="step-n">04</span><div>Done. New downloads in that browser now go to the app, cookies and all. Pin the icon to see recent hand-overs.</div></li>
+          </ol>
+          <a class="button button-ghost" href="https://github.com/zecod/byterush#browser-extension" data-link="extension">Extension details on GitHub <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4"/></svg></a>
+        </section>
+
+        <!-- 05 comparison -->
+        <section class="block" id="compare" aria-labelledby="compare-title">
+          <p class="kicker"><span aria-hidden="true">[*]</span> 05 · compared</p>
+          <h2 id="compare-title">Byterush and a plain browser download</h2>
+          <p class="lead">What changes when Byterush takes over a download from Chrome or Edge.</p>
+          <div class="table-wrap">
+            <table class="compare">
+              <caption class="sr-only">Byterush compared with a plain browser download</caption>
+              <thead><tr><th scope="col"><span class="sr-only">Feature</span></th><th scope="col">Browser</th><th scope="col">Byterush</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Connections per file</th><td>1</td><td><span class="yes">Up to 32</span>, 8 by default, re-split as they finish</td></tr>
+                <tr><th scope="row">After quitting, a reboot or a crash</th><td>Interrupted; resumed by hand, if the server allows</td><td><span class="yes">Continues by itself</span> from the last checkpoint</td></tr>
+                <tr><th scope="row">Connection drops</th><td>Often stops with a network error</td><td><span class="yes">Retried</span> with backoff</td></tr>
+                <tr><th scope="row">Link expires halfway</th><td>Start again from zero</td><td><span class="yes">Click the link again</span>, it continues</td></tr>
+                <tr><th scope="row">Speed limit</th><td>None built in</td><td><span class="yes">Global cap</span> from the toolbar</td></tr>
+                <tr><th scope="row">Queue</th><td>Everything starts at once</td><td><span class="yes">Downloads at a time</span> and “download later”</td></tr>
+                <tr><th scope="row">Folders by type</th><td>One downloads folder</td><td><span class="yes">Video, music, documents, archives, programs</span></td></tr>
+                <tr><th scope="row">Batch from a pattern</th><td>No</td><td><span class="yes">img*.jpg</span> with number ranges</td></tr>
+                <tr><th scope="row">Links copied to the clipboard</th><td>No</td><td><span class="yes">Offers to download them</span></td></tr>
+                <tr><th scope="row">Price</th><td>Free</td><td><span class="yes">Free</span> and open source</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 06 download -->
+        <section class="block" id="download" aria-labelledby="download-title">
+          <p class="kicker"><span aria-hidden="true">[*]</span> 06 · download</p>
+          <h2 id="download-title">Download Byterush</h2>
+          <p class="lead"><span data-release-line>Free for Windows, macOS and Linux. Every build comes from the latest GitHub release.</span></p>
+          <p class="sample" data-mobile-note hidden><span aria-hidden="true">[i]</span> Byterush is a desktop app. Open this page on your Windows, macOS or Linux computer to install it there.</p>
+          <div class="platforms">
+            <article class="platform" data-os="windows" aria-labelledby="p-win">
+              <header class="p-top">
+                <h3 id="p-win"><span class="os-glyph" aria-hidden="true">[win]</span>Windows</h3>
+                <span class="detected" hidden>your system</span>
+              </header>
+              <p class="req">Windows 10 and 11 · x64</p>
+              <ul class="builds">
+                <li><a href="https://github.com/zecod/byterush/releases/latest" data-build="win-exe"><span class="b-name">Installer</span><span class="b-ext">.exe</span><span class="b-size" data-size></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg></a></li>
+                <li><a href="https://github.com/zecod/byterush/releases/latest" data-build="win-msi"><span class="b-name">MSI package</span><span class="b-ext">.msi</span><span class="b-size" data-size></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg></a></li>
+              </ul>
+              <p class="p-note">The installer is the usual choice. The MSI suits managed or scripted installs.</p>
+            </article>
+            <article class="platform" data-os="macos" aria-labelledby="p-mac">
+              <header class="p-top">
+                <h3 id="p-mac"><span class="os-glyph" aria-hidden="true">[mac]</span>macOS</h3>
+                <span class="detected" hidden>your system</span>
+              </header>
+              <p class="req">macOS 11 Big Sur or later</p>
+              <ul class="builds">
+                <li><a href="https://github.com/zecod/byterush/releases/latest" data-build="mac-arm"><span class="b-name">Apple Silicon</span><span class="b-ext">.dmg</span><span class="b-size" data-size></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg></a></li>
+                <li><a href="https://github.com/zecod/byterush/releases/latest" data-build="mac-x64"><span class="b-name">Intel</span><span class="b-ext">.dmg</span><span class="b-size" data-size></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg></a></li>
+              </ul>
+              <p class="p-note">Apple Silicon is any Mac with an M chip. Not sure? Apple menu → About This Mac.</p>
+            </article>
+            <article class="platform" data-os="linux" aria-labelledby="p-linux">
+              <header class="p-top">
+                <h3 id="p-linux"><span class="os-glyph" aria-hidden="true">[tux]</span>Linux</h3>
+                <span class="detected" hidden>your system</span>
+              </header>
+              <p class="req">64-bit (x64) distributions</p>
+              <ul class="builds">
+                <li><a href="https://github.com/zecod/byterush/releases/latest" data-build="linux-appimage"><span class="b-name">AppImage</span><span class="b-ext">.AppImage</span><span class="b-size" data-size></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg></a></li>
+                <li><a href="https://github.com/zecod/byterush/releases/latest" data-build="linux-deb"><span class="b-name">Debian, Ubuntu</span><span class="b-ext">.deb</span><span class="b-size" data-size></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg></a></li>
+                <li><a href="https://github.com/zecod/byterush/releases/latest" data-build="linux-rpm"><span class="b-name">Fedora, openSUSE</span><span class="b-ext">.rpm</span><span class="b-size" data-size></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg></a></li>
+              </ul>
+              <p class="p-note">The AppImage runs on most distributions: make it executable and open it.</p>
+            </article>
+          </div>
+          <p class="dl-foot">Older versions and every file of a release are on <a class="underline" href="https://github.com/zecod/byterush/releases" data-link="allReleases">GitHub Releases</a>. Rather build it yourself? See <a class="underline" href="https://github.com/zecod/byterush#development" data-link="source">building from source</a>.</p>
+        </section>
+
+        <!-- 07 faq -->
+        <section class="block" id="faq" aria-labelledby="faq-title">
+          <p class="kicker"><span aria-hidden="true">[*]</span> 07 · questions</p>
+          <h2 id="faq-title">FAQ</h2>
           <ul class="faq">
-            <li><details><summary><span class="plus" aria-hidden="true"></span>What is Byterush?</summary><p>A desktop download manager. It splits each file into ranges, downloads them over parallel connections and writes them straight into place, with pause and resume.</p></details></li>
-            <li><details><summary><span class="plus" aria-hidden="true"></span>Is it really free?</summary><p>Yes. There are no plans, ads or accounts, and the source code is on GitHub.</p></details></li>
-            <li><details><summary><span class="plus" aria-hidden="true"></span>Why is it faster than my browser?</summary><p>Browsers fetch a file over one connection. Many servers limit each connection, so several at once add up. If your own internet line is already the limit, the speed is the same.</p></details></li>
-            <li><details><summary><span class="plus" aria-hidden="true"></span>Will it catch downloads from my browser?</summary><p>Yes, with the extension for Chrome, Edge and Brave. For now you load it from the app (Settings → browser → open folder) with developer mode on.</p></details></li>
-            <li><details><summary><span class="plus" aria-hidden="true"></span>What about sites with Cloudflare or a login?</summary><p>The extension passes the browser's session along, including clearance cookies, so most downloads behind a check work. One-time links and form posts stay in the browser, so nothing is lost.</p></details></li>
-            <li><details><summary><span class="plus" aria-hidden="true"></span>Where are my files saved?</summary><p>In the folder you choose, optionally sorted into folders by type. You can also pick a separate folder for files in progress.</p></details></li>
-            <li><details><summary><span class="plus" aria-hidden="true"></span>Which systems does it run on?</summary><p>Windows 10 and 11, macOS 11 or later on Apple Silicon and Intel, and Linux (deb, rpm and AppImage).</p></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Is Byterush really free? Is it open source?</summary><div class="answer"><p>Yes to both. There are no plans, ads, trials or accounts. The full source of the app and the extension is <a class="underline" href="https://github.com/zecod/byterush" data-link="github">on GitHub</a>, and you can build it yourself.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>How much faster is it, really?</summary><div class="answer"><p data-bench-faq>It depends on the server. Byterush helps most when a server limits each connection or is far away, and very little when a single connection already fills your line.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Is it safe? What can the extension see?</summary><div class="answer">
+              <p>The extension asks for these permissions, each for one job:</p>
+              <ul class="perm">
+                <li><code>downloads</code> to notice a download, hold it while the app checks the file, and cancel or resume it.</li>
+                <li><code>webRequest</code>, <code>cookies</code> and access to all sites to read the headers and cookies the browser sent for that download, so the app can send the same ones.</li>
+                <li><code>contextMenus</code> for “Download with Byterush” and <code>storage</code> for its settings and the list of recent hand-overs.</li>
+              </ul>
+              <p>It only talks to the Byterush app on your own computer at <code>127.0.0.1</code>. The app only accepts calls that carry the extension's id, and nothing is sent anywhere else: no account, no analytics.</p>
+            </div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Does it work on sites with a login or a “verify you're human” page?</summary><div class="answer"><p>Usually, yes. The extension passes along the exact session the browser used, including clearance cookies, user agent and referer, so the server sees the same visitor that just passed the check.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Why did a download stay in the browser?</summary><div class="answer"><p>Before taking over, Byterush opens one connection and checks that it gets the same file. If it gets a challenge page, a different size, or the link only worked once (common for invoices and form posts), the browser keeps its own download so nothing is lost. You can also switch the extension off for a site in its popup.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>What happens when a download link expires?</summary><div class="answer"><p>Many sites hand out links that only work for a few minutes or hours. If a download pauses or fails because of that, go back to the page and click the link again. The extension sends the fresh link to Byterush, which continues the existing download from where it stopped instead of starting over.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>What if my computer restarts or the app crashes?</summary><div class="answer"><p>Progress is checkpointed to disk as it downloads. Next time Byterush starts, unfinished downloads resume from their last checkpoint by themselves.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Do I need the extension?</summary><div class="answer"><p>No. You can paste a link with “+ add url”, let the clipboard monitor offer copied links, or queue a whole pattern with a batch download. The extension just makes it automatic for downloads that start in Chrome or Edge.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Which systems and browsers are supported?</summary><div class="answer"><p>Windows 10 and 11 (x64), macOS 11 or later on Apple Silicon and Intel, and 64-bit Linux as an AppImage, a <code>.deb</code> or an <code>.rpm</code>. The extension is built for Chrome and Edge; there is no Firefox version yet.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Where are settings and download data stored?</summary><div class="answer">
+              <p>In your system's app-data folder, on your computer only:</p>
+              <dl class="paths">
+                <dt>Windows</dt><dd><code>%APPDATA%\com.byterush.app</code></dd>
+                <dt>macOS</dt><dd><code>~/Library/Application Support/com.byterush.app</code></dd>
+                <dt>Linux</dt><dd><code>~/.local/share/com.byterush.app</code></dd>
+              </dl>
+              <p>Your files go to the download folder you choose, optionally sorted into folders by type.</p>
+            </div></details></li>
           </ul>
         </section>
+      </main>
 
-        <section class="block">
-          <h3>Get Byterush</h3>
-          <p>Free for Windows, macOS and Linux. Pick the build for your system from the latest release.</p>
-          <div class="field">
-            <span class="field-text" data-release-text>github.com/zecod/byterush/releases</span>
-            <a class="button button-solid" href="#" data-link="releases">Download</a>
-          </div>
-        </section>
-
-        <footer class="links">
-          <a href="#" data-link="github">GitHub</a>
-          <a href="#" data-link="releases">Releases</a>
-          <a href="#" data-link="extension">Extension</a>
-          <a href="#" data-link="issues">Issues</a>
-        </footer>
-      </div>
-      <div class="legal"><span>©2026 Byterush</span><span>Free</span><a href="#" data-link="github">Source</a></div>
-    </main>
+      <footer class="links" aria-label="Project links">
+        <a href="https://github.com/zecod/byterush" data-link="github">GitHub</a>
+        <a href="https://github.com/zecod/byterush/releases" data-link="allReleases">Releases</a>
+        <a href="https://github.com/zecod/byterush/issues" data-link="issues">Issues</a>
+        <a href="https://github.com/zecod/byterush#browser-extension" data-link="extension">Extension</a>
+      </footer>
+    </div>
+    <div class="legal"><span>©2026 Byterush</span><span>Free and open source</span><a href="https://github.com/zecod/byterush" data-link="github">Source</a></div>
   </body>
 </html>

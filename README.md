@@ -8,8 +8,19 @@ A fast segmented download manager for Windows, macOS and Linux, built with Rust 
   TCP connections and written straight into a preallocated file.
 - **Dynamic segmentation** – when a connection finishes, it takes over half of the largest range
   still in progress, so all connections stay busy until the end.
-- **Pause / resume** – progress per range is persisted to `state.json`; resuming continues where
-  each range stopped. Servers without range support fall back to a single connection.
+- **Pause / resume that survives crashes** – every few seconds the partial file is synced to disk and
+  only then is its progress recorded in `state.json`, so a crash or power cut costs at most a few
+  seconds and never leaves the state claiming bytes the disk doesn't have. Downloads that were running
+  continue on the next start, and quitting flushes everything first. A resume goes straight to the
+  first missing range (no extra request); if the file changed on the server meanwhile (size, ETag or
+  Last-Modified), the download starts over instead of mixing two versions. Servers without range
+  support fall back to a single connection.
+- **Expired links** – start the download again in the browser (or right-click → *update link…*) and
+  the paused or failed download continues from where it stopped, after checking it's the same file.
+- **Fewer 403s** – a 403 from hotlink protection is retried with the site's own Referer; servers that
+  cap connections per client get fewer connections instead of retry storms; the Windows/macOS system
+  proxy is used like the browser does. A link that answers with a web page (login, captcha, "your
+  download will start") is reported instead of saved under the file's name.
 - **Queue** – limit on simultaneous downloads; "Download later" parks items until resumed.
 - **Speed limiter** – global token bucket, toggled from the toolbar.
 - **Categories** – files are sorted into Video / Music / Documents / Compressed / Programs folders.
@@ -21,6 +32,8 @@ A fast segmented download manager for Windows, macOS and Linux, built with Rust 
   are queued in one call, the UI receives only changed rows and renders a virtualized list.
   `cargo run --release --example bench_many -- 500 3` downloads 500 files in ~2 s locally.
 - Retries with backoff, duplicate-name handling, light/dark theme, segment map per download.
+- One instance at a time: launching it again brings the open window forward (two copies would
+  overwrite each other's state).
 
 ## Browser extension
 
@@ -31,7 +44,7 @@ A fast segmented download manager for Windows, macOS and Linux, built with Rust 
 - **Protected sites**: it records the exact request headers Chrome sent (cookies such as
   `cf_clearance`, user-agent, referer) and the app replays them, so sites behind Cloudflare-style
   checks see the same verified session.
-- **Never loses a download**: Chrome's copy is paused while the app opens its first connection.
+- **Never loses a download**: Chrome's copy is held while the app opens its first connection.
   Only if the server returns the same file (not a challenge page, not a different size) is Chrome's
   copy cancelled; otherwise Chrome continues as if nothing happened (one-time links, form posts,
   bot checks the app can't pass).
@@ -53,9 +66,15 @@ Icons come from [Hugeicons](https://hugeicons.com) (free set).
 ```bash
 npm install
 npm run tauri dev        # run the app
-cd src-tauri && cargo test   # engine tests (local HTTP server, pause/resume, integrity)
+cd src-tauri && cargo test   # engine tests (local HTTP server, pause/resume, crash, integrity)
 npm run tauri build      # installer in src-tauri/target/release/bundle
 ```
+
+- `scripts/bench.sh <url> [runs]` – one connection (curl, like a browser) against Byterush with 1, 8
+  and 16 connections; the landing page's numbers come from it.
+- `CHROME=/path/to/chromium node scripts/extension-e2e.mjs` – the extension in a real Chromium against
+  the real bridge and engine: hand-over, Chrome's copy dropped, compressed transfers, app closed, and
+  the first download right after the app starts.
 
 ### Platforms
 
