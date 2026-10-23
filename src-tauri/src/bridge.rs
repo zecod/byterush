@@ -126,6 +126,15 @@ async fn download(State(bridge): State<Bridge>, headers: HeaderMap, Json(req): J
     if !matches!(url::Url::parse(&req.url).map(|u| u.scheme().to_string()).as_deref(), Ok("http" | "https")) {
         return with_cors(origin, reject("only http(s) links can be taken over".into()));
     }
+    let expect = Expectation { size: req.size.filter(|s| *s > 0), mime: req.mime };
+    // the same file as a paused or failed download (its link expired, typically): the browser's
+    // fresh link continues that download instead of starting a second one from zero
+    let resumable = match (&req.file_name, expect.size) {
+        (Some(name), Some(size)) if req.source != "menu" && bridge.manager.browser_integration() => {
+            bridge.manager.find_resumable(name, size)
+        }
+        _ => None,
+    };
     let add = AddRequest {
         url: req.url,
         file_name: req.file_name,
@@ -150,10 +159,16 @@ async fn download(State(bridge): State<Bridge>, headers: HeaderMap, Json(req): J
     if !bridge.manager.browser_integration() {
         return with_cors(origin, reject("browser integration is turned off in the app".into()));
     }
-    let expect = Expectation { size: req.size.filter(|s| *s > 0), mime: req.mime };
-    let (id, verdict) = match bridge.manager.add_watched(add, expect).await {
-        Ok(v) => v,
-        Err(e) => return with_cors(origin, reject(e)),
+    let adopted = resumable.and_then(|id| {
+        let (verdict, previous) = bridge.manager.adopt(&id, add.url.clone(), add.headers.clone(), expect.clone())?;
+        Some((id, verdict, previous))
+    });
+    let (id, verdict, previous) = match adopted {
+        Some((id, verdict, previous)) => (id, verdict, Some(previous)),
+        None => match bridge.manager.add_watched(add, expect).await {
+            Ok((id, verdict)) => (id, verdict, None),
+            Err(e) => return with_cors(origin, reject(e)),
+        },
     };
     let outcome = match tokio::time::timeout(VERDICT_TIMEOUT, verdict).await {
         Ok(Ok(Ok(()))) => Ok(()),
@@ -167,8 +182,12 @@ async fn download(State(bridge): State<Bridge>, headers: HeaderMap, Json(req): J
             with_cors(origin, accept(id))
         }
         Err(reason) => {
-            // the browser keeps it; drop our attempt and anything it wrote
-            bridge.manager.remove(std::slice::from_ref(&id), true);
+            match previous {
+                // the browser keeps it; the earlier download stays as it was
+                Some(previous) => bridge.manager.restore(&id, previous, reason.clone()),
+                // the browser keeps it; drop our attempt and anything it wrote
+                None => bridge.manager.remove(std::slice::from_ref(&id), true),
+            }
             with_cors(origin, reject(reason))
         }
     }

@@ -3,18 +3,79 @@
 use super::naming::{self, part_path};
 use super::segments;
 use super::types::{Expectation, Finishing, Layout, Segment, Status, now_ms};
-use super::{Ctx, Job};
+use super::{Ctx, Job, Saver};
 use anyhow::{Context, anyhow, bail};
 use futures_util::StreamExt;
 use reqwest::StatusCode;
-use reqwest::header::{CONTENT_DISPOSITION, CONTENT_RANGE, CONTENT_TYPE, RANGE};
+use reqwest::header::{CONTENT_DISPOSITION, CONTENT_RANGE, CONTENT_TYPE, ETAG, HeaderMap, LAST_MODIFIED, RANGE, REFERER};
+use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
+
+/// How often a running download's progress is made durable: the part file is synced, then the
+/// state file may record the progress that sync covers. After a crash or power cut the state never
+/// claims bytes the disk doesn't have, and at most this much is downloaded again.
+/// `BYTERUSH_CHECKPOINT_MS` overrides it (for tests).
+fn checkpoint_every() -> Duration {
+    let ms = std::env::var("BYTERUSH_CHECKPOINT_MS").ok().and_then(|v| v.parse().ok()).unwrap_or(4000);
+    Duration::from_millis(ms)
+}
+
+/// The server answered with this status instead of the file.
+#[derive(Debug)]
+pub struct HttpStatus(pub StatusCode);
+
+impl std::fmt::Display for HttpStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = self.0;
+        match s.as_u16() {
+            401 => write!(f, "the server asks for a login ({s}): start the download in the browser so its session comes along"),
+            403 => write!(
+                f,
+                "the server refused access ({s}): the link may have expired or need the browser's session; start it again in the browser to continue this download"
+            ),
+            404 | 410 => write!(f, "the file is no longer at this address ({s})"),
+            429 => write!(f, "the server is limiting requests ({s}): try again later or with fewer connections"),
+            _ => write!(f, "server answered {s}"),
+        }
+    }
+}
+
+impl std::error::Error for HttpStatus {}
+
+/// The status behind an error, when it was the server's answer.
+fn http_status(e: &anyhow::Error) -> Option<StatusCode> {
+    e.downcast_ref::<HttpStatus>().map(|h| h.0)
+}
+
+/// What identifies one version of a file on the server.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Validators {
+    pub etag: Option<String>,
+    pub last_modified: Option<String>,
+}
+
+impl Validators {
+    fn of(headers: &HeaderMap) -> Self {
+        let get = |name| headers.get(name).and_then(|v: &reqwest::header::HeaderValue| v.to_str().ok()).map(str::to_string);
+        // weak ETags can differ between identical copies, so only strong ones say anything
+        Self { etag: get(ETAG).filter(|e| !e.starts_with("W/")), last_modified: get(LAST_MODIFIED) }
+    }
+
+    /// Whether `other` is a different version. Every marker both sides have must disagree: servers
+    /// behind a load balancer often give the same file different ETags (or dates), and starting a
+    /// download over for nothing would throw away good progress.
+    fn differs(&self, other: &Self) -> bool {
+        let pairs = [(&self.etag, &other.etag), (&self.last_modified, &other.last_modified)];
+        let compared: Vec<_> = pairs.iter().filter_map(|(a, b)| Some((a.as_ref()?, b.as_ref()?))).collect();
+        !compared.is_empty() && compared.iter().all(|(a, b)| a != b)
+    }
+}
 
 pub struct Probe {
     pub final_url: url::Url,
@@ -22,28 +83,40 @@ pub struct Probe {
     pub size: Option<u64>,
     pub resumable: bool,
     pub content_type: Option<String>,
+    pub validators: Validators,
+}
+
+/// `Content-Range: bytes 100-199/1000` — the start and the total (`*` = unknown).
+struct ContentRange {
+    start: Option<u64>,
+    total: Option<u64>,
+}
+
+fn content_range(headers: &HeaderMap) -> Option<ContentRange> {
+    let v = headers.get(CONTENT_RANGE)?.to_str().ok()?.trim();
+    let v = v.strip_prefix("bytes").unwrap_or(v).trim();
+    let (range, total) = v.split_once('/')?;
+    let start = range.split_once('-').and_then(|(a, _)| a.trim().parse().ok());
+    Some(ContentRange { start, total: total.trim().parse().ok() })
 }
 
 /// Size and range support from the reply to a `Range: bytes=0-…` request.
 fn classify(resp: &reqwest::Response) -> anyhow::Result<(Option<u64>, bool)> {
     let status = resp.status();
-    let total = || {
-        resp.headers()
-            .get(CONTENT_RANGE)
-            .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.rsplit('/').next())
-            .and_then(|t| t.trim().parse::<u64>().ok())
-    };
+    let total = content_range(resp.headers()).and_then(|r| r.total);
     if status == StatusCode::PARTIAL_CONTENT {
-        let total = total();
         Ok((total, total.is_some()))
-    } else if status == StatusCode::RANGE_NOT_SATISFIABLE && total() == Some(0) {
+    } else if status == StatusCode::RANGE_NOT_SATISFIABLE && total == Some(0) {
         Ok((Some(0), false)) // empty file
     } else if status.is_success() {
         Ok((resp.content_length(), false))
     } else {
-        bail!("server answered {status}")
+        Err(HttpStatus(status).into())
     }
+}
+
+fn content_type(resp: &reqwest::Response) -> Option<String> {
+    resp.headers().get(CONTENT_TYPE).and_then(|v| v.to_str().ok()).map(str::to_string)
 }
 
 /// Headers that describe the browser session and are safe to replay; transport and range headers
@@ -77,15 +150,37 @@ fn get(client: &reqwest::Client, url: &str, headers: &[(String, String)]) -> req
         .fold(client.get(url), |req, (k, v)| req.header(k.as_str(), v.as_str()))
 }
 
+/// The first request of a download. Hotlink protection refuses requests that don't come from one
+/// of the site's pages: with no Referer to replay, a 403 is retried once as if coming from the
+/// site's home page. Returns the response and the Referer that made it work, if one was needed.
+async fn send_first(
+    client: &reqwest::Client,
+    url: &str,
+    headers: &[(String, String)],
+    range: &str,
+) -> anyhow::Result<(reqwest::Response, Option<String>)> {
+    let resp = get(client, url, headers).header(RANGE, range).send().await?;
+    let has_referer = headers.iter().any(|(k, _)| k.eq_ignore_ascii_case("referer"));
+    if resp.status() != StatusCode::FORBIDDEN || has_referer {
+        return Ok((resp, None));
+    }
+    let Some(origin) = url::Url::parse(url).ok().map(|u| format!("{}/", u.origin().ascii_serialization())) else {
+        return Ok((resp, None));
+    };
+    let retry = get(client, url, headers).header(RANGE, range).header(REFERER, &origin).send().await?;
+    if retry.status().is_success() { Ok((retry, Some(origin))) } else { Ok((resp, None)) }
+}
+
 /// Ask for the first byte: a 206 with Content-Range tells us the size and that ranges work.
 pub async fn probe(client: &reqwest::Client, url: &str, headers: &[(String, String)]) -> anyhow::Result<Probe> {
     let parsed = url::Url::parse(url).context("invalid URL")?;
-    let resp = get(client, parsed.as_str(), headers).header(RANGE, "bytes=0-0").send().await?;
+    let (resp, _) = send_first(client, parsed.as_str(), headers, "bytes=0-0").await?;
     let (size, resumable) = classify(&resp)?;
-    let headers = resp.headers();
-    let content_type = headers.get(CONTENT_TYPE).and_then(|v| v.to_str().ok()).map(str::to_string);
+    let content_type = content_type(&resp);
+    let validators = Validators::of(resp.headers());
     let final_url = resp.url().clone();
-    let file_name = headers
+    let file_name = resp
+        .headers()
         .get(CONTENT_DISPOSITION)
         .and_then(|v| v.to_str().ok())
         .and_then(naming::from_content_disposition)
@@ -93,26 +188,49 @@ pub async fn probe(client: &reqwest::Client, url: &str, headers: &[(String, Stri
         .or_else(|| naming::from_url(&parsed))
         .or_else(|| final_url.host_str().map(str::to_string))
         .unwrap_or_else(|| "download".into());
-    Ok(Probe { final_url, file_name: naming::sanitize(&file_name), size, resumable, content_type })
+    Ok(Probe { final_url, file_name: naming::sanitize(&file_name), size, resumable, content_type, validators })
+}
+
+/// Where a saved download continues: its first unfinished range, and what the file was.
+struct Resume {
+    idx: usize,
+    start: u64,
+    end: u64,
+    size: u64,
+    validators: Validators,
 }
 
 pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::Result<()> {
     if cancel.is_cancelled() {
         return Ok(());
     }
-    let (url, headers, resuming) = {
+    let (url, headers, resume, all_done, known_size) = {
         let mut r = job.rec.lock().unwrap();
         r.status = Status::Connecting;
         r.error = None;
-        let part_exists = r.part_path.as_deref().is_some_and(|p| std::path::Path::new(p).exists());
-        (r.url.clone(), r.headers.clone(), r.resumable && !r.segments.is_empty() && part_exists)
+        let part_exists = r.part_path.as_deref().is_some_and(|p| Path::new(p).exists());
+        let saved = r.resumable && part_exists && !r.segments.is_empty();
+        let size = r.size.filter(|_| saved);
+        let resume = size.and_then(|size| {
+            let (idx, s) = r.segments.iter().enumerate().find(|(_, s)| s.remaining() > 0)?;
+            let validators = Validators { etag: r.etag.clone(), last_modified: r.last_modified.clone() };
+            Some(Resume { idx, start: s.pos(), end: s.end, size, validators })
+        });
+        let all_done = size.is_some() && resume.is_none();
+        (r.url.clone(), r.headers.clone(), resume, all_done, r.size)
     };
-    let opened = tokio::select! {
-        s = open_first(&ctx.client, &url, &headers, resuming) => s?,
-        _ = cancel.cancelled() => return Ok(()),
+    let opened = if all_done {
+        // every byte is already on disk (the app stopped while finishing): only the last step is left
+        FirstResponse { size: known_size, resumable: true, continues: true, ..FirstResponse::default() }
+    } else {
+        tokio::select! {
+            s = open_first(&ctx.client, &url, &headers, resume) => s?,
+            _ = cancel.cancelled() => return Ok(()),
+        }
     };
     // a download handed over by the browser must get the same file the browser was getting
     let verdict = job.rt.lock().unwrap().verdict.take();
+    let handed_over = verdict.is_some();
     if let Some((tx, expect)) = verdict {
         let check = mismatch(&opened, &expect);
         let _ = tx.send(match &check {
@@ -123,18 +241,37 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
             bail!(reason);
         }
     }
-    let FirstResponse { size: probed_size, resumable, body: mut first, .. } = opened;
+    // a file link answered with a web page is a login wall or a "your download will start" page:
+    // saving it under the file's name would only look like a broken file. (A hand-over was already
+    // compared with what the browser got, and the browser has let go of it by now.)
+    let name = job.rec.lock().unwrap().file_name.clone();
+    if !handed_over && serves_page_instead(&name, opened.content_type.as_deref()) {
+        bail!("the site answered with a web page instead of the file (a login, captcha or \"download will start\" page): start the download in the browser");
+    }
+    let FirstResponse { size: probed_size, resumable, body: mut first, body_idx, continues, validators, referer, .. } = opened;
 
-    let (target, part, fresh, size, connections) = {
+    let (target, part, fresh, size, connections, body_idx) = {
         let mut r = job.rec.lock().unwrap();
+        if let Some(referer) = referer {
+            r.headers.push(("Referer".into(), referer));
+        }
         let target = PathBuf::from(&r.dir).join(&r.file_name);
         let existing = r.part_path.as_deref().map(PathBuf::from).filter(|p| p.exists());
-        let can_continue = resumable && r.resumable && r.size == probed_size && !r.segments.is_empty() && existing.is_some();
+        let can_continue = continues && resumable && r.resumable && r.size == probed_size && !r.segments.is_empty() && existing.is_some();
+        // a resumed range must never be written into a fresh layout
+        let body_idx = if can_continue {
+            body_idx
+        } else {
+            if continues {
+                first = None;
+            }
+            0
+        };
         let part = match existing {
             Some(p) if can_continue => p,
             stale => {
                 if let Some(old) = stale {
-                    let _ = std::fs::remove_file(old);
+                    remove_part_files(&old);
                 }
                 match &ctx.temp_dir {
                     Some(dir) => dir.join(format!("{}.{}.byterush", r.file_name, &r.id[..8.min(r.id.len())])),
@@ -143,7 +280,16 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
             }
         };
         r.part_path = Some(part.to_string_lossy().into_owned());
-        if !can_continue {
+        if can_continue {
+            if validators.etag.is_some() {
+                r.etag = validators.etag;
+            }
+            if validators.last_modified.is_some() {
+                r.last_modified = validators.last_modified;
+            }
+        } else {
+            r.etag = validators.etag;
+            r.last_modified = validators.last_modified;
             r.size = probed_size;
             r.resumable = resumable;
             r.segments = match (resumable, probed_size) {
@@ -157,7 +303,7 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
             let parallel = r.resumable && connections > 1;
             r.layout = if parallel && !supports_sparse(part.parent()) { Layout::Parts } else { Layout::Single };
         }
-        (target, part, !can_continue, r.size, connections)
+        (target, part, !can_continue, r.size, connections, body_idx)
     };
     let layout = job.rec.lock().unwrap().layout;
 
@@ -181,7 +327,7 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
             }
             Sink::Single(file)
         }
-        Layout::Parts => Sink::Parts(part.clone()),
+        Layout::Parts => Sink::Parts(Parts::new(part.clone())),
     });
     if cancel.is_cancelled() {
         return Ok(());
@@ -190,17 +336,19 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
 
     let mut workers = JoinSet::new();
     for i in 0..connections {
-        // the already-open first response keeps streaming as segment 0
+        // the already-open first response keeps streaming as its segment
         let initial = if i == 0 {
             first.take().map(|resp| {
-                job.rec.lock().unwrap().segments[0].claimed = true;
-                (0, resp)
+                job.rec.lock().unwrap().segments[body_idx].claimed = true;
+                (body_idx, resp)
             })
         } else {
             None
         };
         workers.spawn(worker(ctx.clone(), job.clone(), sink.clone(), cancel.clone(), initial));
     }
+    let stop_checkpoints = CancellationToken::new();
+    let checkpointer = tokio::spawn(checkpoints(job.clone(), sink.clone(), ctx.saver.clone(), stop_checkpoints.clone()));
     let mut first_error = None;
     while let Some(res) = workers.join_next().await {
         match res {
@@ -213,18 +361,27 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
             }
         }
     }
-    if cancel.is_cancelled() {
-        return Ok(());
-    }
+    stop_checkpoints.cancel();
+    let _ = checkpointer.await;
 
     let complete = job.rec.lock().unwrap().segments.iter().all(|s| s.remaining() == 0);
-    if !complete {
+    if cancel.is_cancelled() || !complete {
+        // stopping part-way: everything counted so far goes to disk before the state records it
+        let s = sink.clone();
+        if let Ok(Ok(())) = tokio::task::spawn_blocking(move || s.sync()).await {
+            job.rt.lock().unwrap().persisted = None;
+        }
+        if cancel.is_cancelled() {
+            return Ok(());
+        }
         return Err(first_error.unwrap_or_else(|| anyhow!("connection lost before the download finished")));
     }
 
+    // until the file is in place the state keeps the last synced progress: a crash while finishing
+    // fetches the unsynced tail again instead of trusting it
     job.rec.lock().unwrap().status = Status::Finishing;
     let final_path = if target.exists() {
-        naming::unique_path(target.parent().unwrap_or(&target), &job.rec.lock().unwrap().file_name, &[])
+        naming::unique_path(target.parent().unwrap_or(&target), &job.rec.lock().unwrap().file_name, &HashSet::new())
     } else {
         target
     };
@@ -238,50 +395,106 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
                 drop(file);
                 move_file(&finish_job, &part, &destination)
             }
-            Sink::Parts(base) => rebuild(&finish_job, &base, &destination),
+            Sink::Parts(parts) => {
+                let base = parts.base.clone();
+                drop(parts); // close every part before reading them back
+                rebuild(&finish_job, &base, &destination)
+            }
         }
         .with_context(|| format!("cannot write {}", destination.display()))
     })
     .await??;
 
-    let mut r = job.rec.lock().unwrap();
-    if let Some(name) = final_path.file_name() {
-        r.file_name = name.to_string_lossy().into_owned();
+    {
+        let mut r = job.rec.lock().unwrap();
+        if let Some(name) = final_path.file_name() {
+            r.file_name = name.to_string_lossy().into_owned();
+        }
+        r.part_path = None;
+        // don't keep session cookies around once they are no longer needed
+        r.headers.clear();
+        r.size = Some(r.downloaded());
+        r.status = Status::Completed;
+        r.completed_at = Some(now_ms());
     }
-    r.part_path = None;
-    // don't keep session cookies around once they are no longer needed
-    r.headers.clear();
-    r.size = Some(r.downloaded());
-    r.status = Status::Completed;
-    r.completed_at = Some(now_ms());
+    job.rt.lock().unwrap().persisted = None;
     Ok(())
 }
 
-/// A fresh download's first request doubles as the probe: it asks for the whole file as an open
-/// range and keeps streaming, saving a round trip per file. Resuming checks the file first so a
-/// file that changed on the server restarts cleanly.
-async fn open_first(
-    client: &reqwest::Client,
-    url: &str,
-    headers: &[(String, String)],
-    resuming: bool,
-) -> anyhow::Result<FirstResponse> {
-    if resuming {
-        let p = probe(client, url, headers).await?;
-        return Ok(FirstResponse { size: p.size, resumable: p.resumable && p.size.is_some(), content_type: p.content_type, body: None });
+/// Every few seconds: sync the part data, then let the state file record the progress it covers.
+async fn checkpoints(job: Arc<Job>, sink: Arc<Sink>, saver: Arc<Saver>, stop: CancellationToken) {
+    loop {
+        tokio::select! {
+            _ = tokio::time::sleep(checkpoint_every()) => {}
+            _ = stop.cancelled() => return,
+        }
+        let progress = job.rec.lock().unwrap().segments.clone();
+        let s = sink.clone();
+        if let Ok(Ok(())) = tokio::task::spawn_blocking(move || s.sync()).await {
+            job.rt.lock().unwrap().persisted = Some(progress);
+            saver.mark();
+        }
     }
-    let resp = get(client, url, headers).header(RANGE, "bytes=0-").send().await?;
-    let (size, resumable) = classify(&resp)?;
-    let content_type = resp.headers().get(CONTENT_TYPE).and_then(|v| v.to_str().ok()).map(str::to_string);
-    let body = (size != Some(0)).then_some(resp);
-    Ok(FirstResponse { size, resumable: resumable && size.is_some(), content_type, body })
 }
 
+/// A fresh download's first request doubles as the probe: it asks for the whole file as an open
+/// range and keeps streaming, saving a round trip per file. A resumed download goes straight for
+/// its first unfinished range, and that response tells whether the saved progress still applies.
+async fn open_first(client: &reqwest::Client, url: &str, headers: &[(String, String)], resume: Option<Resume>) -> anyhow::Result<FirstResponse> {
+    if let Some(rs) = resume {
+        let (resp, referer) = send_first(client, url, headers, &format!("bytes={}-{}", rs.start, rs.end - 1)).await?;
+        let status = resp.status();
+        let range = content_range(resp.headers());
+        let validators = Validators::of(resp.headers());
+        let same = status == StatusCode::PARTIAL_CONTENT
+            && range.is_some_and(|r| r.start == Some(rs.start) && r.total == Some(rs.size))
+            && !rs.validators.differs(&validators);
+        if same {
+            return Ok(FirstResponse {
+                size: Some(rs.size),
+                resumable: true,
+                content_type: content_type(&resp),
+                body: Some(resp),
+                body_idx: rs.idx,
+                continues: true,
+                validators,
+                referer,
+            });
+        }
+        // an expired link and the like: report it and keep the progress for a fresh link
+        if !status.is_success() && status != StatusCode::RANGE_NOT_SATISFIABLE {
+            return Err(HttpStatus(status).into());
+        }
+        // anything else means the file changed on the server: start over below
+    }
+    let (resp, referer) = send_first(client, url, headers, "bytes=0-").await?;
+    let (size, resumable) = classify(&resp)?;
+    let content_type = content_type(&resp);
+    let validators = Validators::of(resp.headers());
+    let body = (size != Some(0)).then_some(resp);
+    Ok(FirstResponse { size, resumable: resumable && size.is_some(), content_type, body, body_idx: 0, continues: false, validators, referer })
+}
+
+#[derive(Default)]
 struct FirstResponse {
     size: Option<u64>,
     resumable: bool,
     content_type: Option<String>,
     body: Option<reqwest::Response>,
+    /// The segment `body` streams (0 for a fresh download).
+    body_idx: usize,
+    /// The saved progress still applies: same file on the server.
+    continues: bool,
+    validators: Validators,
+    /// Referer that got past hotlink protection, kept for every later request.
+    referer: Option<String>,
+}
+
+/// Whether a response of `content_type` for a file called `name` is a web page instead of the file.
+fn serves_page_instead(name: &str, content_type: Option<&str>) -> bool {
+    let html = content_type.is_some_and(|t| t.trim().to_ascii_lowercase().starts_with("text/html"));
+    let page_name = naming::extension(name).is_none_or(|e| matches!(e.as_str(), "htm" | "html" | "xhtml" | "shtml" | "mht" | "mhtml" | "php" | "asp" | "aspx" | "jsp"));
+    html && !page_name
 }
 
 /// Why the first response is not the file the browser was downloading, if it isn't:
@@ -315,12 +528,15 @@ async fn worker(
         }
         let (idx, preopened) = match initial.take() {
             Some((idx, resp)) => (idx, Some(resp)),
-            // a new connection waits for its first response, then still has to ramp up (TCP slow
-            // start takes several round trips): about three times the request latency in all
-            None => match segments::claim(&mut job.rec.lock().unwrap().segments, 3.0 * job.rt.lock().unwrap().request_latency) {
-                Some(idx) => (idx, None),
-                None => return Ok(()),
-            },
+            None => {
+                // a new connection waits for its first response, then still has to ramp up (TCP
+                // slow start takes several round trips): about three times the request latency
+                let latency = job.rt.lock().unwrap().request_latency;
+                match segments::claim(&mut job.rec.lock().unwrap().segments, 3.0 * latency) {
+                    Some(idx) => (idx, None),
+                    None => return Ok(()),
+                }
+            }
         };
         job.rt.lock().unwrap().active += 1;
         let res = fetch_segment(&ctx, &job, &file, idx, &cancel, preopened).await;
@@ -360,6 +576,12 @@ async fn fetch_segment(
             Ok(false) => anyhow!("server keeps closing the connection"),
             Err(e) => e,
         };
+        // a server that refuses an extra connection (403, 429, 503) is capping connections per
+        // client: leave the range to the ones that work instead of hammering it with retries
+        let refused = http_status(&error).is_some_and(|s| matches!(s.as_u16(), 403 | 429 | 503));
+        if refused && job.rt.lock().unwrap().active > 1 {
+            return Err(error);
+        }
         failures = if progressed { 1 } else { failures + 1 };
         if failures > ctx.retries() {
             return Err(error);
@@ -417,11 +639,11 @@ async fn fetch_once(
         }
     };
     let status = resp.status();
+    if !status.is_success() {
+        return Err(HttpStatus(status).into());
+    }
     if resumable && status != StatusCode::PARTIAL_CONTENT {
         bail!("server stopped honouring range requests ({status})");
-    }
-    if !status.is_success() {
-        bail!("server answered {status}");
     }
 
     let mut stream = resp.bytes_stream();
@@ -531,17 +753,44 @@ impl Pending {
 /// Where a download's bytes go while it runs.
 pub(crate) enum Sink {
     Single(File),
-    /// Base path; segment `i` lives in `<base>.<i>`.
-    Parts(PathBuf),
+    Parts(Parts),
+}
+
+/// One file per segment (`<base>.<i>`), each opened once and kept open while the download runs.
+pub(crate) struct Parts {
+    base: PathBuf,
+    files: Mutex<HashMap<usize, Arc<File>>>,
+}
+
+impl Parts {
+    fn new(base: PathBuf) -> Self {
+        Self { base, files: Mutex::new(HashMap::new()) }
+    }
+
+    fn file(&self, idx: usize) -> std::io::Result<Arc<File>> {
+        if let Some(file) = self.files.lock().unwrap().get(&idx) {
+            return Ok(file.clone());
+        }
+        let file = Arc::new(OpenOptions::new().create(true).write(true).truncate(false).open(segment_file(&self.base, idx))?);
+        Ok(self.files.lock().unwrap().entry(idx).or_insert(file).clone())
+    }
 }
 
 impl Sink {
     fn write(&self, idx: usize, seg_start: u64, offset: u64, buf: &[u8]) -> std::io::Result<()> {
         match self {
             Sink::Single(file) => write_all_at(file, buf, offset),
-            Sink::Parts(base) => {
-                let file = OpenOptions::new().create(true).write(true).truncate(false).open(segment_file(base, idx))?;
-                write_all_at(&file, buf, offset - seg_start)
+            Sink::Parts(parts) => write_all_at(&*parts.file(idx)?, buf, offset - seg_start),
+        }
+    }
+
+    /// Make everything written so far durable.
+    fn sync(&self) -> std::io::Result<()> {
+        match self {
+            Sink::Single(file) => file.sync_data(),
+            Sink::Parts(parts) => {
+                let files: Vec<Arc<File>> = parts.files.lock().unwrap().values().cloned().collect();
+                files.iter().try_for_each(|f| f.sync_data())
             }
         }
     }
@@ -574,7 +823,8 @@ fn report(job: &Job, stage: &'static str, done: u64, total: u64) {
     job.rt.lock().unwrap().finishing = Some(Finishing { stage, done, total });
 }
 
-/// Join the segment files in order into the final file ("rebuilding").
+/// Join the segment files in order into the final file ("rebuilding"). The file is assembled under
+/// a temporary name and renamed into place, so a crash never leaves half a file under the real name.
 fn rebuild(job: &Job, base: &Path, out: &Path) -> anyhow::Result<()> {
     let mut segments: Vec<(usize, u64, u64)> = {
         let r = job.rec.lock().unwrap();
@@ -582,8 +832,9 @@ fn rebuild(job: &Job, base: &Path, out: &Path) -> anyhow::Result<()> {
     };
     segments.sort_by_key(|&(_, start, _)| start);
     let total: u64 = segments.iter().map(|&(_, a, b)| b.saturating_sub(a)).sum();
+    let staging = naming::staging_path(out);
     let result = (|| -> anyhow::Result<()> {
-        let mut writer = std::io::BufWriter::with_capacity(COPY_CHUNK, File::create(out)?);
+        let mut writer = std::io::BufWriter::with_capacity(COPY_CHUNK, File::create(&staging)?);
         let mut buf = vec![0u8; COPY_CHUNK];
         let mut done = 0u64;
         report(job, "rebuilding", 0, total);
@@ -603,6 +854,7 @@ fn rebuild(job: &Job, base: &Path, out: &Path) -> anyhow::Result<()> {
             }
         }
         writer.into_inner().map_err(|e| e.into_error())?.sync_all()?;
+        std::fs::rename(&staging, out)?;
         Ok(())
     })();
     match result {
@@ -611,21 +863,23 @@ fn rebuild(job: &Job, base: &Path, out: &Path) -> anyhow::Result<()> {
             Ok(())
         }
         Err(e) => {
-            let _ = std::fs::remove_file(out);
+            let _ = std::fs::remove_file(&staging);
             Err(e)
         }
     }
 }
 
-/// Rename into place, or copy with progress when the temp folder is on another drive.
+/// Rename into place, or copy with progress when the temp folder is on another drive (into a
+/// temporary name first, so an interrupted copy never looks like the finished file).
 fn move_file(job: &Job, from: &Path, to: &Path) -> anyhow::Result<()> {
     if std::fs::rename(from, to).is_ok() {
         return Ok(());
     }
     let total = std::fs::metadata(from)?.len();
+    let staging = naming::staging_path(to);
     let result = (|| -> anyhow::Result<()> {
         let mut reader = File::open(from)?;
-        let mut writer = File::create(to)?;
+        let mut writer = File::create(&staging)?;
         let mut buf = vec![0u8; COPY_CHUNK];
         let mut done = 0u64;
         report(job, "moving", 0, total);
@@ -639,6 +893,8 @@ fn move_file(job: &Job, from: &Path, to: &Path) -> anyhow::Result<()> {
             report(job, "moving", done, total);
         }
         writer.sync_all()?;
+        drop(writer);
+        std::fs::rename(&staging, to)?;
         Ok(())
     })();
     match result {
@@ -647,7 +903,7 @@ fn move_file(job: &Job, from: &Path, to: &Path) -> anyhow::Result<()> {
             Ok(())
         }
         Err(e) => {
-            let _ = std::fs::remove_file(to);
+            let _ = std::fs::remove_file(&staging);
             Err(e)
         }
     }
