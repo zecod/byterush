@@ -1,0 +1,159 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run per branch or pull request: a newer push cancels the run still going for the older one.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  versions:
+    name: Version consistency
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      # package.json, package-lock.json, Cargo.toml, Cargo.lock, tauri.conf.json and the
+      # extension's manifest.json must all carry the same version
+      - run: node scripts/version.mjs --check
+      # the release workflow takes its notes from this section
+      - name: CHANGELOG.md has a section for this version
+        run: node scripts/release-notes.mjs "$(node -p 'require("./package.json").version')" > /dev/null
+
+  rust:
+    name: Rust (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: src-tauri
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libxdo-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+
+      - name: Format
+        run: cargo fmt --check
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --locked
+
+  frontend:
+    name: UI and extension
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            video/package-lock.json
+      - run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Build
+        run: npx vite build
+      - name: Landing page script parses
+        run: node --check landing/main.js
+      # the videos draw the app with its own components, so a change to the UI can break them
+      - name: Videos type check
+        working-directory: video
+        run: |
+          npm ci --ignore-scripts
+          npx tsc --noEmit
+      - name: Extension scripts parse
+        run: |
+          for f in extension/*.js; do
+            node --check "$f"
+            echo "ok $f"
+          done
+      - name: Extension manifest
+        run: |
+          node --input-type=module - <<'EOF'
+          import fs from "node:fs";
+          const m = JSON.parse(fs.readFileSync("extension/manifest.json", "utf8"));
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          if (m.manifest_version !== 3) throw new Error("manifest_version must be 3");
+          if (m.version !== pkg.version) throw new Error(`manifest version ${m.version} != package.json ${pkg.version}`);
+          const files = [m.background?.service_worker, m.action?.default_popup, ...Object.values(m.icons ?? {}), ...Object.values(m.action?.default_icon ?? {})];
+          for (const f of files.filter(Boolean)) if (!fs.existsSync(`extension/${f}`)) throw new Error(`manifest references missing file ${f}`);
+          console.log(`manifest ok: ${m.name} ${m.version}`);
+          EOF
+
+  extension-e2e:
+    name: Extension end-to-end
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libxdo-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # Branded Chrome ignores --load-extension since version 137; Chrome for Testing still loads
+      # unpacked extensions from the command line.
+      - name: Chrome for Testing
+        id: chrome
+        run: |
+          line=$(npx --yes @puppeteer/browsers@3 install chrome@stable --path "$RUNNER_TEMP/browsers" | tail -n 1)
+          path=${line#* }
+          "$path" --version
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+
+      # builds examples/bridge_harness, then drives the extension in the browser against it
+      # (ports 51723, 47811 and 9333)
+      - name: End-to-end test
+        env:
+          CHROME: ${{ steps.chrome.outputs.path }}
+        run: node scripts/extension-e2e.mjs

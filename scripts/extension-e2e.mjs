@@ -145,5 +145,12 @@ check("the first download after the app starts is taken over", await inApp("late
 const passed = checks.every(Boolean);
 console.log(`${handOvers} hand-overs${passed ? "" : `, files kept in ${work}`}`);
 for (const c of children) c.kill("SIGKILL");
-if (passed) fs.rmSync(work, { recursive: true, force: true });
+// Chrome's helper processes can still be writing to the profile for a moment after the kill
+if (passed) {
+  try {
+    fs.rmSync(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  } catch (e) {
+    console.log(`could not remove ${work}: ${e.code ?? e}`);
+  }
+}
 process.exit(passed ? 0 : 1);
