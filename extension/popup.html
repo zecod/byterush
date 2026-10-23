@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Byterush</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <img class="logo" src="icons/48.png" alt="" />
+        <span id="app-name">byterush</span>
+      </div>
+      <div class="status" id="status"><span class="dot"></span><span id="status-text">checking…</span></div>
+    </header>
+
+    <section>
+      <label class="row">
+        <span>
+          <span class="label">catch downloads</span>
+          <span class="hint">hand browser downloads to the app</span>
+        </span>
+        <input type="checkbox" id="enabled" class="switch" />
+      </label>
+      <label class="row" id="site-row">
+        <span>
+          <span class="label">on <b id="site">this site</b></span>
+          <span class="hint">turn off for sites that need the browser</span>
+        </span>
+        <input type="checkbox" id="site-enabled" class="switch" />
+      </label>
+    </section>
+
+    <section>
+      <div class="fig">Fig 1. recent hand-overs</div>
+      <ul id="recent"></ul>
+    </section>
+
+    <footer>
+      <span id="footer-note">tip: right-click a link → download with byterush</span>
+    </footer>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
