@@ -1,0 +1,55 @@
+[package]
+name = "byterush"
+version = "0.2.0"
+description = "Byterush - a fast segmented download manager"
+authors = ["Alterbit"]
+edition = "2024"
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "byterush_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "charset"] }
+futures-util = "0.3"
+uuid = { version = "1", features = ["v4"] }
+url = "2"
+percent-encoding = "2"
+anyhow = "1"
+arboard = { version = "3", default-features = false }
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60", features = ["Win32_System_IO", "Win32_System_Ioctl", "Win32_Storage_FileSystem"] }
+
+[dev-dependencies]
+tower-http = { version = "0.6", features = ["fs"] }
+tempfile = "3"
+
+# No debug symbols in dev builds: keeps target/ small (full debuginfo is several GB)
+[profile.dev]
+debug = 0
+
+[profile.dev.package."*"]
+debug = 0
+
+# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
