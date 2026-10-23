@@ -6,6 +6,7 @@ pub mod naming;
 mod segments;
 pub mod types;
 
+pub use download::HttpStatus;
 use futures_util::StreamExt;
 use limiter::Limiter;
 use serde::{Deserialize, Serialize};
@@ -16,7 +17,6 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex, Weak};
 use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
-pub use download::HttpStatus;
 pub use types::*;
 
 /// Changes are written at most this often: a burst (a batch finishing, a queue starting) costs one write.
@@ -665,15 +665,7 @@ fn view(job: &Job, with_segments: bool, now: Instant) -> DownloadView {
         }
     }
     let eta = record.size.filter(|_| rt.speed > 1.0).map(|size| size.saturating_sub(downloaded) as f64 / rt.speed);
-    DownloadView {
-        downloaded,
-        segment_count,
-        finishing: rt.finishing.clone(),
-        speed: rt.speed,
-        eta,
-        active_connections: rt.active,
-        record,
-    }
+    DownloadView { downloaded, segment_count, finishing: rt.finishing.clone(), speed: rt.speed, eta, active_connections: rt.active, record }
 }
 
 /// Targets of unfinished downloads: a new download must not pick one of these names.

@@ -126,7 +126,13 @@ async fn quitting_keeps_every_byte_and_continues_next_start() {
     let m = manager(out.path());
     set_cap(&m, 3072);
     let id = m
-        .add(AddRequest { url: format!("{base}/quit.bin"), dir: Some(out.path().to_string_lossy().into()), connections: Some(4), start: true, ..Default::default() })
+        .add(AddRequest {
+            url: format!("{base}/quit.bin"),
+            dir: Some(out.path().to_string_lossy().into()),
+            connections: Some(4),
+            start: true,
+            ..Default::default()
+        })
         .await
         .unwrap();
     wait_for(&m, &id, Status::Downloading).await;
@@ -160,12 +166,18 @@ async fn file_replaced_on_server_while_paused_starts_over() {
     let m = manager(out.path());
     set_cap(&m, 2048);
     let id = m
-        .add(AddRequest { url: format!("{base}/nightly.bin"), dir: Some(out.path().to_string_lossy().into()), connections: Some(4), start: true, ..Default::default() })
+        .add(AddRequest {
+            url: format!("{base}/nightly.bin"),
+            dir: Some(out.path().to_string_lossy().into()),
+            connections: Some(4),
+            start: true,
+            ..Default::default()
+        })
         .await
         .unwrap();
     wait_for(&m, &id, Status::Downloading).await;
     tokio::time::sleep(Duration::from_millis(800)).await;
-    m.pause(&[id.clone()]);
+    m.pause(std::slice::from_ref(&id));
     tokio::time::sleep(Duration::from_millis(300)).await;
     assert!(m.get(&id).unwrap().downloaded > 0);
 
@@ -173,7 +185,7 @@ async fn file_replaced_on_server_while_paused_starts_over() {
     let v2 = pattern(6 * MB, 2);
     std::fs::write(&path, &v2).unwrap();
     set_cap(&m, 0);
-    m.resume(&[id.clone()]);
+    m.resume(std::slice::from_ref(&id));
     wait_for(&m, &id, Status::Completed).await;
     assert!(std::fs::read(out.path().join("nightly.bin")).unwrap() == v2, "bytes of two versions were mixed");
 }
@@ -241,13 +253,7 @@ async fn serve_site(site: Site) -> String {
 }
 
 fn site(data: &[u8], referer: bool, cap: usize) -> Site {
-    Site {
-        data: Arc::new(data.to_vec()),
-        referer,
-        cap,
-        inflight: Arc::new(AtomicUsize::new(0)),
-        refused: Arc::new(AtomicUsize::new(0)),
-    }
+    Site { data: Arc::new(data.to_vec()), referer, cap, inflight: Arc::new(AtomicUsize::new(0)), refused: Arc::new(AtomicUsize::new(0)) }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -260,7 +266,13 @@ async fn hotlink_protection_gets_the_sites_referer() {
     let probe = m.probe(&format!("{base}/file.bin")).await.unwrap();
     assert_eq!(probe.size, Some(data.len() as u64));
     let id = m
-        .add(AddRequest { url: format!("{base}/file.bin"), dir: Some(out.path().to_string_lossy().into()), connections: Some(4), start: true, ..Default::default() })
+        .add(AddRequest {
+            url: format!("{base}/file.bin"),
+            dir: Some(out.path().to_string_lossy().into()),
+            connections: Some(4),
+            start: true,
+            ..Default::default()
+        })
         .await
         .unwrap();
     wait_for(&m, &id, Status::Completed).await;
@@ -277,7 +289,13 @@ async fn per_client_connection_cap_does_not_stop_the_download() {
     let m = manager(out.path());
     let started = Instant::now();
     let id = m
-        .add(AddRequest { url: format!("{base}/file.bin"), dir: Some(out.path().to_string_lossy().into()), connections: Some(8), start: true, ..Default::default() })
+        .add(AddRequest {
+            url: format!("{base}/file.bin"),
+            dir: Some(out.path().to_string_lossy().into()),
+            connections: Some(8),
+            start: true,
+            ..Default::default()
+        })
         .await
         .unwrap();
     wait_for(&m, &id, Status::Completed).await;
@@ -295,7 +313,11 @@ async fn default_user_agent_is_the_apps_own() {
     assert!(ua.starts_with("Byterush/") && !ua.starts_with("Mozilla"), "{ua}");
     // the old built-in value (posing as a browser) is replaced on load
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("state.json"), r#"{"settings":{"user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) Byterush/0.2"}}"#).unwrap();
+    std::fs::write(
+        dir.path().join("state.json"),
+        r#"{"settings":{"user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) Byterush/0.2"}}"#,
+    )
+    .unwrap();
     assert_eq!(manager(dir.path()).settings().user_agent, "");
 }
 
@@ -310,7 +332,12 @@ async fn a_web_page_is_not_saved_as_the_file() {
     let base = listen(axum::Router::new().route("/setup.exe", axum::routing::get(interstitial))).await;
     let m = manager(out.path());
     let id = m
-        .add(AddRequest { url: format!("{base}/setup.exe"), dir: Some(out.path().to_string_lossy().into()), start: true, ..Default::default() })
+        .add(AddRequest {
+            url: format!("{base}/setup.exe"),
+            dir: Some(out.path().to_string_lossy().into()),
+            start: true,
+            ..Default::default()
+        })
         .await
         .unwrap();
     for _ in 0..200 {
