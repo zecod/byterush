@@ -79,7 +79,7 @@ npx vite build
 for f in extension/*.js landing/main.js; do node --check "$f"; done
 
 # videos (from video/, after npm ci): they draw the app with its own components
-npx tsc --noEmit
+npm run lint
 
 # versions agree across package.json, Cargo.toml, tauri.conf.json, manifest.json and the lockfiles
 npm run version:check
