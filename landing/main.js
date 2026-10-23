@@ -1,30 +1,83 @@
-// Measured with scripts in the repo; filled in from a real run. Do not edit by hand.
+// Measured with scripts in the repo; filled in from real runs. Do not edit by hand.
+// One entry per test download; the page shows them as tabs, in this order, the first one selected.
+//   id        short unique name, letters, digits and dashes
+//   title     the tab's label, e.g. "archive.org" or "1 GB file"
 //   file      name of the file that was downloaded
 //   size_mb   its size in MB (all MB/s figures are size_mb / seconds)
 //   server    where it came from, e.g. "ftp.riken.jp (Tokyo)"
 //   date      when it was measured, e.g. "2026-10-23"
-//   runs      one entry per setting; the run with connections: 1 is the browser baseline
+//   runs      one entry per setting: { connections, seconds, label? }; connections: 1 is the browser
+//             baseline, and a missing label is written from the connection count
 //   line      (optional) the connection it was measured on, e.g. "1 Gbit/s fibre, Paris"
 //   note      (optional) one more sentence for the footnote
-// Every speed claim on the page is computed from this object. While any value still says
-// PLACEHOLDER, the page marks the figures as sample numbers.
-const BENCH = {
-  file: "big_buck_bunny_720p_surround.mp4",
-  size_mb: 61.9,
-  server: "archive.org",
-  date: "2026-10-23",
-  line: "a datacenter line that reaches ~70 MB/s on one connection to a nearby server",
-  runs: [
-    { label: "Browser / single connection", connections: 1, seconds: 48.9 },
-    { label: "Byterush · 8 connections", connections: 8, seconds: 10.6 },
-    { label: "Byterush · 16 connections", connections: 16, seconds: 8.6 },
-  ],
-  note:
-    "The Internet Archive limits how fast each connection may go, like many mirrors and file hosts. " +
-    "Average of two runs per setting with scripts/bench.sh; curl stands in for the browser, which also uses one connection per file. " +
-    "Servers that don't limit connections gain less: a 100 MB file from Hetzner Singapore took 7.7 s on one connection and 5.1 s on 16 (1.5×), " +
-    "from Nuremberg 3.7 s and 2.7 s (1.4×), and from Ashburn, where one connection already filled the line, it was no faster.",
-};
+// Every speed claim on the page is computed from these objects; the hero chip and the FAQ use the
+// first one. While an entry still says PLACEHOLDER anywhere, its numbers are marked as samples.
+const BENCHES = [
+  {
+    id: "961mb",
+    title: "961 MB · archive.org",
+    file: "Sintel_Documentary_by_Ali_Boubred.avi",
+    size_mb: 961.2,
+    server: "archive.org",
+    date: "2026-10-23",
+    line: "a datacenter line that reaches ~70 MB/s on one connection to a nearby server",
+    runs: [
+      { connections: 1, seconds: 414.3 },
+      { connections: 8, seconds: 28.4 },
+      { connections: 16, seconds: 22.8 },
+      { connections: 32, seconds: 13.5 },
+    ],
+    note:
+      "The Internet Archive limits how fast each connection may go, like many mirrors and file hosts: one connection got a short fast start and then about 2 MB/s. " +
+      "Average of two runs per setting with scripts/bench.sh; curl stands in for the browser, which also uses one connection per file.",
+  },
+  {
+    id: "3-6gb",
+    title: "3.6 GB · archive.org",
+    file: "ED-360-png.tar",
+    size_mb: 3569.9,
+    server: "archive.org",
+    date: "2026-10-23",
+    runs: [
+      { label: "One connection · reset at 97%", connections: 1, seconds: 1933 },
+      { connections: 32, seconds: 32.7 },
+    ],
+    note:
+      "The single connection never finished: after 32 min 13 s, with 3.46 of 3.57 GB (97%) received, the server reset it. " +
+      "Its time is therefore a lower bound, and so is the speed-up. One run per setting.",
+  },
+  {
+    id: "1gb",
+    title: "1 GB · Hetzner",
+    file: "1GB.bin",
+    size_mb: 1073.7,
+    server: "Hetzner Nuremberg",
+    date: "2026-10-23",
+    runs: [
+      { connections: 1, seconds: 28.9 },
+      { connections: 16, seconds: 6.0 },
+      { connections: 32, seconds: 6.5 },
+    ],
+    note:
+      "A server that doesn't limit connections still gains on a big file; one run per setting. " +
+      "Small files gain less: 100 MB files from Hetzner took 1.4–1.5× less time, and from a server next door, where one connection already filled the line, it was no faster.",
+  },
+  {
+    id: "62mb",
+    title: "62 MB · archive.org",
+    file: "big_buck_bunny_720p_surround.mp4",
+    size_mb: 61.9,
+    server: "archive.org",
+    date: "2026-10-23",
+    runs: [
+      { connections: 1, seconds: 48.9 },
+      { connections: 8, seconds: 10.6 },
+      { connections: 16, seconds: 8.6 },
+      { connections: 32, seconds: 6.0 },
+    ],
+    note: "Average of two runs per setting with scripts/bench.sh.",
+  },
+];
 
 const GITHUB = "https://github.com/zecod/byterush";
 const LINKS = {
@@ -73,15 +126,15 @@ document.addEventListener("keydown", (e) => {
 
 const fixed = (n, d) => n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 const fmtFactor = (x) => `${x >= 10 ? Math.round(x) : fixed(x, 1).replace(/\.0$/, "")}×`;
-const fmtSpeed = (mbps) => `${fixed(mbps, mbps >= 100 ? 0 : 1)} MB/s`;
-const fmtSize = (mb) => (mb >= 1024 ? `${fixed(mb / 1024, 2)} GB` : `${fixed(mb, mb < 10 ? 1 : 0)} MB`);
+const fmtSpeed = (mbps) => `${fixed(mbps, mbps >= 100 ? 0 : 1)}\u00a0MB/s`;
+const fmtSize = (mb) => (mb >= 1024 ? `${fixed(mb / 1024, 2)}\u00a0GB` : `${fixed(mb, mb < 10 ? 1 : 0)}\u00a0MB`);
 const fmtBytes = (b) => (b >= 1073741824 ? `${fixed(b / 1073741824, 2)} GB` : `${fixed(b / 1048576, 1)} MB`);
 const fmtClock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 function fmtTime(sec) {
+  if (sec < 59.95) return `${Number.isInteger(sec) ? sec : fixed(sec, 1)}\u00a0s`;
   const s = Math.round(sec);
-  if (s < 60) return `${s} s`;
   const m = Math.floor(s / 60);
-  if (m < 60) return s % 60 ? `${m} min ${s % 60} s` : `${m} min`;
+  if (m < 60) return s % 60 ? `${m}\u00a0min ${s % 60}\u00a0s` : `${m}\u00a0min`;
   return `${Math.floor(m / 60)} h ${m % 60} min`;
 }
 function el(tag, className, text) {
@@ -91,54 +144,123 @@ function el(tag, className, text) {
   return node;
 }
 
-/* ---------- speed: everything below comes from BENCH ---------- */
+/* ---------- speed: everything below comes from BENCHES ---------- */
 
 function benchStats(b) {
+  if (!b || typeof b !== "object") return null;
   const size = Number(b.size_mb);
-  const runs = (b.runs || [])
+  const runs = (Array.isArray(b.runs) ? b.runs : [])
     .filter((r) => r && Number(r.seconds) > 0)
-    .map((r) => ({ ...r, seconds: Number(r.seconds), connections: Math.max(1, Number(r.connections) || 1), mbps: size / Number(r.seconds) }));
+    .map((r) => {
+      const connections = Math.max(1, Math.round(Number(r.connections) || 1));
+      const label = r.label || (connections === 1 ? "Browser / single connection" : `Byterush · ${connections} connections`);
+      return { ...r, label, connections, seconds: Number(r.seconds), mbps: size / Number(r.seconds) };
+    });
   if (!(size > 0) || runs.length < 2) return null;
   const base = runs.find((r) => r.connections === 1) || runs.reduce((a, r) => (r.seconds > a.seconds ? r : a));
   runs.forEach((r) => (r.factor = base.seconds / r.seconds));
   const best = runs.reduce((a, r) => (r.seconds < a.seconds ? r : a));
-  return { runs, base, best, size, placeholder: /placeholder/i.test(JSON.stringify(b)) };
+  return { b, runs, base, best, size, placeholder: /placeholder/i.test(JSON.stringify(b)) };
 }
 
-const stats = benchStats(BENCH);
-if (stats) renderBench(stats);
-else $$("[data-race], [data-bench-table]").forEach((n) => (n.closest(".table-wrap") || n).setAttribute("hidden", ""));
+const scenarios = (Array.isArray(BENCHES) ? BENCHES : []).map(benchStats).filter(Boolean);
+const firstBench = benchStats(Array.isArray(BENCHES) ? BENCHES[0] : null);
+const race = createRace();
 
-function renderBench({ runs, base, best, size, placeholder }) {
-  const sizeText = fmtSize(size);
-  const faster = runs.filter((r) => r !== base).sort((a, b) => a.connections - b.connections);
-  const pctAtBest = Math.round((best.seconds / base.seconds) * 100);
-
-  // hero chip
+// the hero chip and the FAQ quote the first test
+if (firstBench) {
+  const { best, base, size, placeholder, b } = firstBench;
   if (best.factor > 1.05) {
     $("[data-bench-chip-factor]").textContent = fmtFactor(best.factor);
     $("[data-bench-chip-text]").textContent = `faster than a browser download in our test${placeholder ? " (sample numbers)" : ""}`;
     $("[data-bench-chip]").hidden = false;
   }
+  $("[data-bench-faq]").textContent =
+    `In our test, a ${fmtSize(size)} file from ${b.server} took ${fmtTime(best.seconds)} with ${best.connections} connections ` +
+    `instead of ${fmtTime(base.seconds)} over the single connection a browser uses: ${fmtFactor(best.factor)} faster` +
+    `${placeholder ? " (sample numbers for now)" : ""}. ` +
+    "The gain is largest when a server limits each connection or is far away, and small when one connection already fills your line.";
+}
+
+if (scenarios.length) {
+  buildTabs();
+  showScenario(0);
+} else {
+  $$("[data-race], [data-bench-table]").forEach((n) => (n.closest(".table-wrap") || n).setAttribute("hidden", ""));
+}
+
+function buildTabs() {
+  const host = $("[data-bench-tabs]");
+  const panel = $("[data-bench-panel]");
+  if (scenarios.length < 2) {
+    host.hidden = true;
+    panel.removeAttribute("role");
+    return;
+  }
+  const tabs = scenarios.map((st, i) => {
+    const tab = el("button", "tab");
+    tab.type = "button";
+    tab.id = `bench-tab-${String(st.b.id || i).replace(/[^a-z0-9-]/gi, "")}-${i}`;
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-controls", "bench-panel");
+    tab.append(
+      el("span", "tab-t", st.b.title || st.b.file || `Test ${i + 1}`),
+      el("span", "tab-s", st.placeholder ? "sample numbers" : `up to ${fmtFactor(st.best.factor)} faster`)
+    );
+    tab.addEventListener("click", () => select(i));
+    host.append(tab);
+    return tab;
+  });
+  function select(i, focus) {
+    tabs.forEach((t, k) => {
+      t.setAttribute("aria-selected", String(k === i));
+      t.tabIndex = k === i ? 0 : -1;
+    });
+    panel.setAttribute("aria-labelledby", tabs[i].id);
+    if (focus) tabs[i].focus();
+    showScenario(i);
+  }
+  host.addEventListener("keydown", (e) => {
+    const i = tabs.indexOf(document.activeElement);
+    if (i < 0) return;
+    const keys = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 };
+    if (!(e.key in keys)) return;
+    e.preventDefault();
+    select((keys[e.key] + tabs.length) % tabs.length, true);
+  });
+  panel.tabIndex = 0;
+  tabs.forEach((t, k) => {
+    t.setAttribute("aria-selected", String(k === 0));
+    t.tabIndex = k === 0 ? 0 : -1;
+  });
+  panel.setAttribute("aria-labelledby", tabs[0].id);
+}
+
+function showScenario(i) {
+  const st = scenarios[i];
+  const { b, runs, base, best, size, placeholder } = st;
+  const sizeText = fmtSize(size);
+  const faster = runs.filter((r) => r !== base).sort((x, y) => x.connections - y.connections);
+  const pctAtBest = Math.round((best.seconds / base.seconds) * 100);
+  const words = ["", "one", "two", "three", "four", "five", "six"];
 
   $("[data-bench-sample]").hidden = !placeholder;
-  $("[data-race-title]").textContent = `Fig 2. the same file, downloaded ${["", "one", "two", "three", "four", "five", "six"][runs.length] || runs.length} ways`;
+  $("[data-race-title]").textContent = `Fig 2. the same file, downloaded ${words[runs.length] || runs.length} ways`;
 
-  // lead
   const list = faster.map((r) => `${fmtTime(r.seconds)} with ${r.connections} connections`);
   const joined = list.length > 1 ? `${list.slice(0, -1).join(", ")} and ${list.at(-1)}` : list[0];
   $("[data-bench-lead]").textContent =
-    `We downloaded the same ${sizeText} file from ${BENCH.server} with each setting. ` +
+    `We downloaded ${b.file} (${sizeText}) from ${b.server}. ` +
     `Over a single connection, the way a browser does it, it took ${fmtTime(base.seconds)}. ` +
     `Byterush took ${joined}.`;
 
-  // stat tiles
+  const box = $("[data-bench-stats]");
+  box.replaceChildren();
   const tiles = [
     [`<mark>${fmtFactor(best.factor)}</mark>`, `faster than one connection, using ${best.connections} connections`],
     [`${fixed(best.mbps, best.mbps >= 100 ? 0 : 1)}<small>MB/s</small>`, `average with ${best.connections} connections, against ${fmtSpeed(base.mbps)} over one`],
     [fmtTime(base.seconds - best.seconds), `less waiting for one ${sizeText} file`],
   ];
-  const box = $("[data-bench-stats]");
   for (const [value, label] of tiles) {
     const tile = el("div", "stat");
     const v = el("span", "stat-v");
@@ -147,21 +269,19 @@ function renderBench({ runs, base, best, size, placeholder }) {
     box.append(tile);
   }
 
-  // methodology, generated from BENCH
   const foot = $("[data-bench-method]");
-  const strong = el("strong", "", "Method. ");
-  foot.append(
-    strong,
-    `${BENCH.file}, ${sizeText}${size >= 1024 ? ` (${fixed(size, 0)} MB)` : ""}, downloaded from ${BENCH.server}, measured ${BENCH.date}` +
-      (BENCH.line ? ` on ${BENCH.line}` : "") +
+  foot.replaceChildren(
+    el("strong", "", "Method. "),
+    `${b.file}, ${sizeText}${size >= 1024 ? ` (${fixed(size, 0)} MB)` : ""}, downloaded from ${b.server}, measured ${b.date}` +
+      (b.line ? ` on ${b.line}` : "") +
       `. Average speed is file size ÷ time. When “${best.label}” finished, the single connection had ${pctAtBest}% of the file. ` +
-      (BENCH.note ? `${BENCH.note} ` : "") +
+      (b.note ? `${b.note} ` : "") +
       "Your numbers depend on the server, how far away it is and your own line."
   );
 
-  // results table
   const maxSpeed = Math.max(...runs.map((r) => r.mbps));
   const tbody = $("[data-bench-table] tbody");
+  tbody.replaceChildren();
   for (const r of runs) {
     const tr = el("tr", r === base ? "base" : "");
     const th = el("th", "", r.label);
@@ -178,70 +298,45 @@ function renderBench({ runs, base, best, size, placeholder }) {
     tbody.append(tr);
   }
 
-  // FAQ answer
-  $("[data-bench-faq]").textContent =
-    `In our test, a ${sizeText} file from ${BENCH.server} took ${fmtTime(best.seconds)} with ${best.connections} connections ` +
-    `instead of ${fmtTime(base.seconds)} over the single connection a browser uses: ${fmtFactor(best.factor)} faster` +
-    `${placeholder ? " (sample numbers for now)" : ""}. ` +
-    "The gain is largest when a server limits each connection or is far away, and small when one connection already fills your line.";
-
-  setupRace(runs, base, best);
+  race.load(st);
 }
 
-function setupRace(runs, base, best) {
+function createRace() {
   const host = $("[data-race-lanes]");
   const clock = $("[data-race-clock]");
   const replay = $("[data-race-replay]");
-  const longest = Math.max(...runs.map((r) => r.seconds));
   const PLAY = 6.5; // seconds on screen for the slowest run
-  const speedup = longest / PLAY;
-
-  const lanes = runs.map((r) => {
-    const n = Math.min(32, r.connections);
-    const lane = el("div", `lane${r === base ? " base" : ""}${r === best ? " best" : ""}`);
-    const top = el("div", "lane-top");
-    const stat = el("span", "lane-stat");
-    top.append(el("span", "lane-name", r.label), stat);
-    const track = el("div", "lane-track");
-    track.style.setProperty("--n", n);
-    for (let i = 0; i < n; i++) track.append(el("i"));
-    lane.append(top, track);
-    host.append(lane);
-    return { r, lane, stat, track, last: "" };
-  });
-
-  // every range of a run fills together: re-splitting keeps the connections level to the end
-  function draw(t) {
-    for (const L of lanes) {
-      const p = Math.min(1, t / L.r.seconds);
-      L.track.style.setProperty("--p", `${(p * 100).toFixed(2)}%`);
-      const done = p >= 1;
-      const text = done ? `${fmtClock(L.r.seconds)} · ${fmtSpeed(L.r.mbps)}` : `${fmtClock(t)} · ${Math.floor(p * 100)}%`;
-      if (text !== L.last) {
-        L.last = text;
-        L.lane.classList.toggle("done", done);
-        L.stat.textContent = text;
-        if (done) L.stat.append(el("span", "lane-x", L.r === base ? "1×" : fmtFactor(L.r.factor)));
-      }
-    }
-  }
-
-  if (reducedMotion) {
-    draw(best.seconds);
-    clock.textContent = `frozen at ${fmtClock(best.seconds)}, when the fastest run finished`;
-    return;
-  }
-
+  let st = null;
+  let lanes = [];
+  let longest = 1;
+  let speedup = 1;
   let t = 0;
   let running = false;
   let started = false;
   let last = 0;
+  const stamp = (s) => (longest < 60 ? `${fixed(s, 1)} s` : fmtClock(s));
+
+  // every range of a run fills together: re-splitting keeps the connections level to the end
+  function draw(time) {
+    for (const L of lanes) {
+      const p = Math.min(1, time / L.r.seconds);
+      L.track.style.setProperty("--p", `${(p * 100).toFixed(2)}%`);
+      const done = p >= 1;
+      const text = done ? `${fmtTime(L.r.seconds)} · ${fmtSpeed(L.r.mbps)}` : `${stamp(time)} · ${Math.floor(p * 100)}%`;
+      if (text !== L.last) {
+        L.last = text;
+        L.lane.classList.toggle("done", done);
+        L.stat.textContent = text;
+        if (done) L.stat.append(el("span", "lane-x", L.r === st.base ? "1×" : fmtFactor(L.r.factor)));
+      }
+    }
+  }
   function frame(now) {
     if (!running) return;
     t = Math.min(longest, t + ((now - last) / 1000) * speedup);
     last = now;
     draw(t);
-    clock.textContent = `${fmtClock(t)} elapsed · ${Math.round(speedup)}× playback`;
+    clock.textContent = `${stamp(t)} elapsed · ${Math.round(speedup)}× playback`;
     if (t >= longest) {
       running = false;
       replay.hidden = false;
@@ -251,18 +346,48 @@ function setupRace(runs, base, best) {
   }
   function play() {
     t = 0;
-    running = true;
     started = true;
     replay.hidden = true;
     last = performance.now();
-    requestAnimationFrame(frame);
+    if (!running) {
+      running = true;
+      requestAnimationFrame(frame);
+    }
   }
-  draw(0);
-  clock.textContent = `0:00 · ${Math.round(speedup)}× playback`;
-  replay.addEventListener("click", play);
-  onVisible($("[data-race]"), (visible) => {
-    if (visible && !started) play();
-  }, 0.45);
+  function load(next) {
+    st = next;
+    longest = Math.max(...st.runs.map((r) => r.seconds));
+    speedup = longest / PLAY;
+    host.replaceChildren();
+    lanes = st.runs.map((r) => {
+      const n = Math.min(32, r.connections);
+      const lane = el("div", `lane${r === st.base ? " base" : ""}${r === st.best ? " best" : ""}`);
+      const top = el("div", "lane-top");
+      const stat = el("span", "lane-stat");
+      top.append(el("span", "lane-name", r.label), stat);
+      const track = el("div", "lane-track");
+      track.style.setProperty("--n", n);
+      for (let k = 0; k < n; k++) track.append(el("i"));
+      lane.append(top, track);
+      host.append(lane);
+      return { r, lane, stat, track, last: "" };
+    });
+    if (reducedMotion) {
+      draw(st.best.seconds);
+      clock.textContent = `frozen at ${stamp(st.best.seconds)}, when the fastest run finished`;
+      return;
+    }
+    if (started) play();
+    else {
+      draw(0);
+      clock.textContent = `${stamp(0)} · ${Math.round(speedup)}× playback`;
+    }
+  }
+  if (!reducedMotion) {
+    replay.addEventListener("click", play);
+    onVisible($("[data-race]"), (visible) => visible && !started && st && play(), 0.45);
+  }
+  return { load };
 }
 
 function onVisible(node, cb, threshold = 0.1) {
@@ -547,6 +672,9 @@ const BUILDS = {
   "linux-appimage": { os: "linux", kind: "appimage", arch: "x64", name: ".AppImage" },
   "linux-deb": { os: "linux", kind: "deb", arch: "x64", name: ".deb" },
   "linux-rpm": { os: "linux", kind: "rpm", arch: "x64", name: ".rpm" },
+  "linux-appimage-arm": { os: "linux", kind: "appimage", arch: "arm64", name: ".AppImage" },
+  "linux-deb-arm": { os: "linux", kind: "deb", arch: "arm64", name: ".deb" },
+  "linux-rpm-arm": { os: "linux", kind: "rpm", arch: "arm64", name: ".rpm" },
 };
 const REQUIRES = { windows: "Windows 10 and 11", macos: "macOS 11 or later", linux: "64-bit Linux" };
 
@@ -603,7 +731,8 @@ async function refine(d) {
   return d;
 }
 
-// tauri-action names: Byterush_0.2.0_x64-setup.exe, Byterush_0.2.0_aarch64.dmg, Byterush-0.2.0-1.x86_64.rpm …
+// tauri-action names: Byterush_0.2.0_x64-setup.exe, Byterush_0.2.0_aarch64.dmg, Byterush_0.2.0_arm64.deb,
+// Byterush-0.2.0-1.x86_64.rpm, Byterush-0.2.0-1.aarch64.rpm …
 function classify(name) {
   const n = name.toLowerCase();
   if (/\.(sig|asc|sha256|sha512|blockmap|json|txt|zip|gz|xz|tar)$/.test(n)) return null; // updater bundles and signatures
@@ -646,17 +775,23 @@ const store = {
 
 function parseRelease(json) {
   if (!json || !Array.isArray(json.assets)) return null;
-  const assets = json.assets
+  const files = json.assets
     .map((a) => ({ name: String(a?.name || ""), url: String(a?.browser_download_url || ""), size: Number(a?.size) || 0 }))
-    .filter((a) => a.url.startsWith("https://"))
-    .map((a) => ({ ...a, ...classify(a.name) }))
-    .filter((a) => a.kind);
+    .filter((a) => a.url.startsWith("https://"));
+  const assets = files.map((a) => ({ ...a, ...classify(a.name) })).filter((a) => a.kind);
   const url = String(json.html_url || "");
-  return { tag: String(json.tag_name || ""), url: url.startsWith("https://") ? url : LINKS.releases, published: json.published_at || null, assets };
+  return {
+    tag: String(json.tag_name || ""),
+    url: url.startsWith("https://") ? url : LINKS.releases,
+    published: json.published_at || null,
+    assets,
+    checksums: files.find((a) => /^sha256sums(\.txt)?$/i.test(a.name)) || null,
+    extension: files.find((a) => /^byterush-extension-.*\.zip$/i.test(a.name)) || null,
+  };
 }
 
 async function latestRelease() {
-  const KEY = "byterush.release.v1";
+  const KEY = "byterush.release.v2";
   const hit = store.get(KEY);
   if (hit && typeof hit.at === "number" && Date.now() - hit.at < (hit.release ? 3600e3 : 600e3)) return hit.release;
   let release = null;
@@ -678,18 +813,18 @@ function primaryFor(d) {
   if (d.os === "macos") return d.arch === "x64" ? ["mac-x64", "mac-arm"] : ["mac-arm", "mac-x64"];
   if (d.os === "linux") {
     const order = d.distro === "rpm" ? ["linux-rpm", "linux-appimage", "linux-deb"] : d.distro === "deb" ? ["linux-deb", "linux-appimage", "linux-rpm"] : ["linux-appimage", "linux-deb", "linux-rpm"];
-    return order;
+    return d.arch === "arm64" ? order.map((id) => `${id}-arm`) : order;
   }
   return null;
 }
 
-// the asset for a build on this machine: an arm64 file when there is one, else the build's own arch
+// the asset for a build: Linux and macOS builds name their arch; on Windows on ARM an arm64 file wins
+// when a release has one, otherwise the x64 build runs through emulation
 function assetFor(id, release, d) {
   const b = BUILDS[id];
-  if (d && d.os === b.os && d.arch === "arm64" && b.os !== "macos") {
+  if (d && d.os === "windows" && b.os === "windows" && d.arch === "arm64") {
     const arm = findAsset(release, b.kind, "arm64");
     if (arm) return { asset: arm, arch: "arm64" };
-    if (b.os === "linux") return { asset: null, arch: "arm64" }; // no x64 fallback on ARM Linux
   }
   return { asset: findAsset(release, b.kind, b.arch), arch: b.arch };
 }
@@ -721,11 +856,18 @@ function applyDownloads(d, release) {
     const id = a.dataset.build;
     const { asset } = assetFor(id, release, null);
     a.href = asset ? asset.url : fallback;
-    a.title = asset ? asset.name : "Open the latest release on GitHub";
-    $("[data-size]", a).textContent = asset ? fmtBytes(asset.size) : "";
+    a.title = asset ? `${asset.name} · ${fmtBytes(asset.size)}` : "Open the latest release on GitHub";
+    const size = $("[data-size]", a);
+    if (size) size.textContent = asset ? fmtBytes(asset.size) : "";
     a.classList.toggle("is-pick", !!order && order[0] === id);
   });
   $("[data-mobile-note]").hidden = !d.mobile;
+  $$("[data-checksums]").forEach((a) => (a.href = release?.checksums?.url || fallback));
+  $$("[data-ext-zip]").forEach((a) => {
+    a.href = release?.extension?.url || fallback;
+    const size = $("[data-size]", a);
+    if (size) size.textContent = release?.extension ? fmtBytes(release.extension.size) : "";
+  });
   if (release) {
     const line = $("[data-release-line]");
     const when = release.published ? new Date(release.published) : null;
@@ -752,10 +894,11 @@ function applyDownloads(d, release) {
   label.textContent = `Download for ${OS_NAME[d.os]}`;
   if (d.os === "macos") archTag.textContent = b.arch === "arm64" ? "Apple Silicon" : "Intel";
   else if (d.os === "windows") archTag.textContent = pick.arch === "arm64" ? "ARM64" : "x64";
-  else archTag.textContent = `${pick.arch === "arm64" ? "ARM64" : "x64"} · ${b.name}`;
+  else archTag.textContent = `${b.arch === "arm64" ? "ARM64" : "x64"} · ${b.name}`;
 
-  const armLinux = d.os === "linux" && pick.arch === "arm64" && !pick.asset;
-  hero.href = armLinux ? "#download" : pick.asset ? pick.asset.url : fallback;
+  // a release published before the arm64 Linux builds existed has none: say so instead of guessing
+  const noArm = d.os === "linux" && b.arch === "arm64" && release && !pick.asset;
+  hero.href = pick.asset ? pick.asset.url : fallback;
   hero.title = pick.asset ? pick.asset.name : "";
   const bits = [release ? release.tag : "Free and open source"];
   if (pick.asset) bits.push(fmtBytes(pick.asset.size));
@@ -763,8 +906,8 @@ function applyDownloads(d, release) {
   meta.textContent = bits.join(" · ");
 
   const parts = [];
-  if (armLinux) {
-    parts.push("There is no ARM build for Linux yet. You can ", link("build it from source", LINKS.source), ".");
+  if (noArm) {
+    parts.push(`Release ${release.tag} has no ARM build for Linux. Newer releases do; see `, link("all releases", LINKS.allReleases), ".");
   } else if (d.os === "windows" && d.version === 0) {
     parts.push("Byterush needs Windows 10 or 11.");
   } else if (d.os === "macos" && d.version && d.version < 11) {
@@ -796,3 +939,83 @@ function applyDownloads(d, release) {
   applyDownloads(d, null);
   Promise.all([refine(d), latestRelease()]).then(([dd, release]) => applyDownloads(dd, release));
 }
+
+/* ---------- video: nothing is downloaded until someone presses play ---------- */
+
+function showVideoErrors(video, msg) {
+  const fail = () => (msg.hidden = false);
+  video.addEventListener("error", fail);
+  video.querySelectorAll("source").forEach((s) => s.addEventListener("error", fail));
+}
+
+{
+  const video = $("[data-player-video]");
+  const play = $("[data-player-play]");
+  const msg = $("[data-player-msg]");
+  showVideoErrors(video, msg);
+  play.hidden = false;
+  video.controls = false;
+  play.addEventListener("click", () => {
+    play.hidden = true;
+    video.controls = true;
+    video.play().catch(() => {});
+    video.focus();
+  });
+  video.addEventListener("play", () => {
+    play.hidden = true;
+    video.controls = true;
+  });
+}
+
+// the intro opens in a modal player; without <dialog> support the link simply opens the file
+{
+  const trigger = $("[data-intro]");
+  const dialog = $("[data-lightbox]");
+  const video = $("[data-lb-video]");
+  const msg = $("[data-lb-msg]");
+  if (dialog && typeof dialog.showModal === "function") {
+    showVideoErrors(video, msg);
+    trigger.setAttribute("role", "button");
+    trigger.setAttribute("aria-haspopup", "dialog");
+    trigger.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (!video.getAttribute("src")) {
+        // H.264 where the browser has it (everywhere but some open-source Chromium builds), else VP9
+        const mp4 = trigger.getAttribute("href");
+        video.src = video.canPlayType('video/mp4; codecs="avc1.640028"') ? mp4 : mp4.replace(/\.mp4$/, ".webm");
+      }
+      msg.hidden = !video.error;
+      dialog.showModal();
+      video.play().catch(() => {});
+    });
+    trigger.addEventListener("keydown", (e) => {
+      if (e.key === " ") {
+        e.preventDefault();
+        trigger.click();
+      }
+    });
+    $("[data-lb-close]").addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", (e) => e.target === dialog && dialog.close()); // the backdrop
+    dialog.addEventListener("close", () => {
+      video.pause();
+      trigger.focus();
+    });
+  }
+}
+
+/* ---------- screenshots: light and dark ---------- */
+
+{
+  const buttons = $$("[data-shot]");
+  const images = $$("[data-shot-img]");
+  const show = (mode) => {
+    buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.shot === mode)));
+    images.forEach((img) => (img.hidden = img.dataset.shotImg !== mode));
+  };
+  buttons.forEach((b) => b.addEventListener("click", () => show(b.dataset.shot)));
+  $("[data-shot-seg]").hidden = false;
+  show(window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+}
+
+// illustrations only move while they are on screen
+$$(".tile, .hero").forEach((node) => onVisible(node, (visible) => node.classList.toggle("off", !visible), 0));

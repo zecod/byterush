@@ -25,6 +25,7 @@
         </a>
         <nav class="nav" id="nav" aria-label="Main">
           <ul>
+            <li><a href="#demo">Demo</a></li>
             <li><a href="#speed">Speed</a></li>
             <li><a href="#features">Features</a></li>
             <li><a href="#extension">Extension</a></li>
@@ -40,6 +41,11 @@
 
       <main id="main">
         <section class="hero" id="top" aria-labelledby="hero-title">
+          <svg class="hero-lanes" viewBox="0 0 400 132" aria-hidden="true" focusable="false">
+            <path class="hl-base" d="M0 10H400M0 32H400M0 54H400M0 76H400M0 98H400M0 120H400"/>
+            <path class="hl hl1" d="M0 10H400"/><path class="hl hl2" d="M0 32H400"/><path class="hl hl3 hl-a" d="M0 54H400"/>
+            <path class="hl hl4" d="M0 76H400"/><path class="hl hl5" d="M0 98H400"/><path class="hl hl6" d="M0 120H400"/>
+          </svg>
           <a class="chip" href="#speed" data-bench-chip hidden><span class="chip-mark" data-bench-chip-factor></span><span data-bench-chip-text></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4"/></svg></a>
           <h1 id="hero-title">The free parallel<br class="br-wide" /> download manager</h1>
           <p class="hero-sub">Byterush splits every file across up to 32 connections, picks up where it stopped after a restart or a crash, and takes over the downloads your browser starts, with the same session, so protected sites keep working.</p>
@@ -47,7 +53,8 @@
             <a class="button button-solid button-big" href="https://github.com/zecod/byterush/releases/latest" data-dl-primary>
               <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg><span data-dl-label>Download</span><span class="button-meta" data-dl-arch></span>
             </a>
-            <a class="button button-ghost button-big" href="https://github.com/zecod/byterush" data-link="github">View on GitHub <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4"/></svg></a>
+            <a class="button button-ghost button-big button-play" href="assets/video/intro.mp4" data-intro><span class="play-dot" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4.5 2.8v10.4l8.8-5.2z"/></svg></span>Watch the intro</a>
+            <a class="button button-text button-big" href="https://github.com/zecod/byterush" data-link="github">GitHub <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4"/></svg></a>
           </div>
           <p class="hero-meta"><span data-dl-meta>Free and open source · Windows, macOS and Linux</span><span class="dot-sep" aria-hidden="true">·</span><a class="underline" href="#download">Other platforms</a></p>
           <p class="hero-alt" data-dl-alt hidden></p>
@@ -118,150 +125,434 @@
           <figcaption class="band-cap">Fig 1. One file, eight connections. The bar at the bottom is the file itself: each range belongs to a connection, and a connection that finishes takes half of the biggest range left.</figcaption>
         </figure>
 
-        <!-- 01 speed -->
-        <section class="block" id="speed" aria-labelledby="speed-title">
-          <p class="kicker"><span aria-hidden="true">[*]</span> 01 · speed</p>
-          <h2 id="speed-title">How much faster?</h2>
-          <p class="lead" data-bench-lead>A browser downloads each file over one connection. Byterush opens several and splits the file between them.</p>
-          <noscript><p class="lead">The measured results below are drawn with JavaScript. Turn it on to see them, or read them in <code>main.js</code> on GitHub.</p></noscript>
-
-          <div class="stats" data-bench-stats></div>
-
-          <figure class="race" data-race>
-            <div class="race-head">
-              <span class="fig" data-race-title>Fig 2. the same file, downloaded several ways</span>
-              <span class="race-ctl">
-                <span class="race-clock" data-race-clock aria-hidden="true"></span>
-                <button class="button button-ghost button-small" type="button" data-race-replay hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7M3 2.5v2.5h2.5"/></svg>Replay</button>
-              </span>
+        <!-- 01 demo -->
+        <section class="block" id="demo" aria-labelledby="demo-title">
+          <p class="kicker"><span aria-hidden="true">[*]</span> 01 · in action</p>
+          <h2 id="demo-title">See it in action</h2>
+          <p class="lead">A one-minute tour of the real app.</p>
+          <figure class="player" data-player>
+            <div class="player-frame">
+              <video class="player-video" controls playsinline preload="none" poster="assets/video/demo.jpg" width="1920" height="1080" aria-label="Byterush product demo" data-player-video>
+                <source src="assets/video/demo.mp4" type='video/mp4; codecs="avc1.640028"' />
+                <source src="assets/video/demo.webm" type='video/webm; codecs="vp9"' />
+                <a href="assets/video/demo.mp4">Download the demo video (MP4)</a>
+              </video>
+              <button class="player-play" type="button" data-player-play hidden><span class="play-big" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4.5 2.8v10.4l8.8-5.2z"/></svg></span><span class="sr-only">Play the product demo</span></button>
+              <p class="player-msg" data-player-msg hidden>The demo video isn't available yet. Check back soon.</p>
             </div>
-            <p class="sample" data-bench-sample hidden><span aria-hidden="true">[!]</span> Sample numbers. These are stand-ins until the benchmark is run; they are not a measurement.</p>
-            <div class="race-lanes" data-race-lanes aria-hidden="true"></div>
-            <figcaption class="race-foot" data-bench-method></figcaption>
+            <figcaption class="fig">Fig. the product demo · the video only loads when you press play</figcaption>
           </figure>
 
-          <div class="table-wrap">
-            <table class="results" data-bench-table>
-              <caption class="sr-only">Benchmark results for each run</caption>
-              <thead><tr><th scope="col">Run</th><th scope="col">Time</th><th scope="col">Average speed</th><th scope="col">vs. browser</th></tr></thead>
-              <tbody></tbody>
-            </table>
+          <div class="shots" data-shots>
+            <div class="shots-head">
+              <div>
+                <h3>Light and dark</h3>
+                <p>Byterush follows your system theme. The same window, both ways.</p>
+              </div>
+              <div class="seg" role="group" aria-label="Screenshot theme" data-shot-seg hidden>
+                <button type="button" aria-pressed="true" data-shot="dark">Dark</button>
+                <button type="button" aria-pressed="false" data-shot="light">Light</button>
+              </div>
+            </div>
+            <figure class="shot">
+              <img src="assets/screens/app-dark.webp" width="2480" height="1560" loading="lazy" decoding="async" data-shot-img="dark" alt="The Byterush window in dark mode: a 1 GB file downloading at 105 MB/s over 16 connections, with its segment map and per-range speeds below the download list." />
+              <img src="assets/screens/app-light.webp" width="2480" height="1560" loading="lazy" decoding="async" data-shot-img="light" hidden alt="The Byterush window in light mode: a 1 GB file downloading at 105 MB/s over 16 connections, with its segment map and per-range speeds below the download list." />
+            </figure>
+          </div>
+        </section>
+
+        <!-- 02 speed -->
+        <section class="block" id="speed" aria-labelledby="speed-title">
+          <p class="kicker"><span aria-hidden="true">[*]</span> 02 · speed</p>
+          <h2 id="speed-title">How much faster?</h2>
+          <div class="tabs" role="tablist" aria-label="Test downloads" data-bench-tabs></div>
+          <p class="tabs-note">Same file, same machine, same evening: one connection (how browsers download) against Byterush.</p>
+          <noscript><p class="lead">The measured results are drawn with JavaScript. Turn it on to see them, or read them in <code>main.js</code> on GitHub.</p></noscript>
+
+          <div class="bench-panel" id="bench-panel" role="tabpanel" data-bench-panel>
+            <p class="lead" data-bench-lead>A browser downloads each file over one connection. Byterush opens several and splits the file between them.</p>
+            <div class="stats" data-bench-stats></div>
+            <figure class="race" data-race>
+              <div class="race-head">
+                <span class="fig" data-race-title>Fig 2. the same file, downloaded several ways</span>
+                <span class="race-ctl">
+                  <span class="race-clock" data-race-clock aria-hidden="true"></span>
+                  <button class="button button-ghost button-small" type="button" data-race-replay hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7M3 2.5v2.5h2.5"/></svg>Replay</button>
+                </span>
+              </div>
+              <p class="sample" data-bench-sample hidden><span aria-hidden="true">[!]</span> Sample numbers. These are stand-ins until this test is run; they are not a measurement.</p>
+              <div class="race-lanes" data-race-lanes aria-hidden="true"></div>
+              <figcaption class="race-foot" data-bench-method></figcaption>
+            </figure>
+            <div class="table-wrap">
+              <table class="results" data-bench-table>
+                <caption class="sr-only">Results for each run of this test</caption>
+                <thead><tr><th scope="col">Run</th><th scope="col">Time</th><th scope="col">Average speed</th><th scope="col">vs. browser</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
 
           <div class="why">
             <h3>Why more connections help</h3>
-            <ul class="stars">
-              <li><span class="star" aria-hidden="true">[*]</span><div><strong>Servers cap each connection.</strong> Mirrors, file hosts and CDNs often limit how fast a single connection may go. Four connections get four allowances.</div></li>
-              <li><span class="star" aria-hidden="true">[*]</span><div><strong>Distance slows one connection down.</strong> A TCP connection only sends so much before it waits for an answer, so the farther away the server, the slower one connection runs, however fast your line is.</div></li>
-              <li><span class="star" aria-hidden="true">[*]</span><div><strong>Ranges add up to the full line.</strong> Byterush asks for different byte ranges of the same file at once and writes each one straight into place, so together they fill the bandwidth you pay for.</div></li>
-              <li><span class="star" aria-hidden="true">[*]</span><div><strong>Nobody waits at the end.</strong> When a connection finishes its range, it takes half of the largest range still left, so all of them stay busy until the last byte.</div></li>
+            <ul class="why-grid">
+              <li class="why-card">
+                <svg class="ill why-ill" viewBox="0 0 240 90" aria-hidden="true" focusable="false">
+                  <rect class="k" x="4" y="24" width="50" height="42" rx="4"/><text class="tk" x="29" y="49" text-anchor="middle">server</text>
+                  <path class="k" d="M54 32H186M54 45H186M54 58H186"/>
+                  <rect class="fa a" x="104" y="27" width="12" height="10" rx="2"/><rect class="fa a" x="104" y="40" width="12" height="10" rx="2"/><rect class="fa a" x="104" y="53" width="12" height="10" rx="2"/>
+                  <text class="sm" x="110" y="16" text-anchor="middle">a limit on every connection</text>
+                  <rect class="k" x="186" y="24" width="50" height="42" rx="4"/><text class="tk" x="211" y="49" text-anchor="middle">you</text>
+                  <text class="sm" x="110" y="82" text-anchor="middle">3 connections · 3 allowances</text>
+                </svg>
+                <div><strong>Servers cap each connection.</strong> Mirrors, file hosts and CDNs often limit how fast one connection may go. Several connections get several allowances.</div>
+              </li>
+              <li class="why-card">
+                <svg class="ill why-ill" viewBox="0 0 240 90" aria-hidden="true" focusable="false">
+                  <circle class="f" cx="22" cy="58" r="5"/><circle class="f" cx="218" cy="58" r="5"/>
+                  <path class="k" d="M28 52Q120 0 212 52"/><path class="k" d="M205 47l7 5-8 2"/>
+                  <path class="w" d="M212 66Q120 112 28 66"/><path class="w" d="M35 70l-7-4 8-2"/>
+                  <rect class="f" x="70" y="24" width="8" height="5" rx="1"/><rect class="f" x="84" y="20" width="8" height="5" rx="1"/><rect class="f" x="98" y="17" width="8" height="5" rx="1"/>
+                  <text class="sm" x="120" y="62" text-anchor="middle">wait for each answer</text>
+                  <text class="sm" x="22" y="86" text-anchor="middle">you</text><text class="sm" x="218" y="86" text-anchor="middle">far away</text>
+                </svg>
+                <div><strong>Distance slows one connection down.</strong> A TCP connection only sends so much before it waits for an answer, so the farther the server, the slower one connection runs, however fast your line is.</div>
+              </li>
+              <li class="why-card">
+                <svg class="ill why-ill" viewBox="0 0 240 90" aria-hidden="true" focusable="false">
+                  <rect class="f" x="6" y="16" width="20" height="12" rx="1"/><rect class="fm" x="28" y="16" width="20" height="12" rx="1"/><rect class="f" x="50" y="16" width="20" height="12" rx="1"/><rect class="fm" x="72" y="16" width="20" height="12" rx="1"/>
+                  <text class="sm" x="6" y="10">one file, four ranges</text>
+                  <path class="w" d="M16 28C16 60 120 45 150 45M38 28C38 56 120 45 150 45M60 28C60 52 120 45 150 45M82 28C82 48 120 45 150 45"/>
+                  <rect class="k" x="150" y="36" width="84" height="18" rx="3"/><rect class="f" x="153" y="39" width="78" height="12" rx="2"/>
+                  <rect class="fa" x="150" y="62" width="84" height="16" rx="2"/><text class="ta sm" x="192" y="74" text-anchor="middle">full line</text>
+                </svg>
+                <div><strong>Ranges add up to the full line.</strong> Byterush asks for different byte ranges of the same file at once and writes each one straight into place, so together they fill the bandwidth you pay for.</div>
+              </li>
+              <li class="why-card">
+                <svg class="ill why-ill" viewBox="0 0 240 90" aria-hidden="true" focusable="false">
+                  <text class="sm" x="4" y="10">without re-splitting</text>
+                  <rect class="tr" x="4" y="16" width="226" height="6" rx="1"/><rect class="f" x="4" y="16" width="110" height="6" rx="1"/>
+                  <rect class="tr" x="4" y="25" width="226" height="6" rx="1"/><rect class="f" x="4" y="25" width="226" height="6" rx="1"/>
+                  <rect class="tr" x="4" y="34" width="226" height="6" rx="1"/><rect class="f" x="4" y="34" width="150" height="6" rx="1"/>
+                  <text class="sm" x="4" y="56">with re-splitting</text>
+                  <rect class="f" x="4" y="62" width="150" height="6" rx="1"/><rect class="f" x="4" y="71" width="150" height="6" rx="1"/><rect class="f" x="4" y="80" width="150" height="6" rx="1"/>
+                  <path class="a" d="M158 58v32"/><text class="tk sm" x="164" y="77">done sooner</text>
+                </svg>
+                <div><strong>Nobody waits at the end.</strong> When a connection finishes its range, it takes half of the largest range still left, so all of them stay busy until the last byte.</div>
+              </li>
             </ul>
             <p class="note"><span aria-hidden="true">[i]</span> The gain is largest on slow, busy or distant servers. When one connection already fills your line, for example a fast CDN nearby, Byterush can't beat your own bandwidth and the times come out about the same.</p>
           </div>
         </section>
 
-        <!-- 02 features -->
+        <!-- 03 features -->
         <section class="block" id="features" aria-labelledby="features-title">
-          <p class="kicker"><span aria-hidden="true">[*]</span> 02 · features</p>
+          <p class="kicker"><span aria-hidden="true">[*]</span> 03 · features</p>
           <h2 id="features-title">Everything a download manager should do</h2>
           <p class="lead">Fast when the server allows it, careful when it doesn't, and quiet the rest of the time.</p>
-          <ul class="features">
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 15V8M9.5 15V5M14 15V8M18.5 15V11M3 19h18"/></svg></span>
-              <h3>Up to 32 connections</h3>
-              <p>Each file is split into ranges that download side by side and are written straight into place. Eight by default, up to 32 per file.</p>
-              <span class="tag">speed</span>
+          <ul class="bento">
+            <!-- parallel connections, re-split -->
+            <li class="tile t-xl">
+              <div class="tile-art">
+                <svg class="ill ill-par" viewBox="0 0 600 300" aria-hidden="true" focusable="false">
+                  <text x="106" y="22">file.iso · 4 GB · one range per connection</text>
+                  <path class="k" d="M24 118h32l14 14v52H24z"/><path class="k" d="M56 118v14h14"/>
+                  <text x="47" y="206" text-anchor="middle">4 GB</text>
+                  <path class="w" d="M76 150C92 150 90 46 106 46M76 150C92 150 90 76 106 76M76 150C92 150 90 106 106 106M76 150C92 150 90 136 106 136M76 150C92 150 90 166 106 166M76 150C92 150 90 196 106 196M76 150C92 150 90 226 106 226M76 150C92 150 90 256 106 256"/>
+                  <g>
+                    <rect class="tr" x="106" y="40" width="400" height="12" rx="2"/><rect class="tr" x="106" y="70" width="400" height="12" rx="2"/>
+                    <rect class="tr" x="106" y="100" width="400" height="12" rx="2"/><rect class="tr" x="106" y="130" width="400" height="12" rx="2"/>
+                    <rect class="tr" x="106" y="160" width="400" height="12" rx="2"/><rect class="tr" x="106" y="190" width="400" height="12" rx="2"/>
+                    <rect class="tr" x="106" y="220" width="400" height="12" rx="2"/><rect class="tr" x="106" y="250" width="400" height="12" rx="2"/>
+                    <rect class="f p1" x="106" y="40" width="400" height="12" rx="2"/><rect class="f p2" x="106" y="70" width="400" height="12" rx="2"/>
+                    <rect class="f p3" x="106" y="100" width="400" height="12" rx="2"/><rect class="f p4" x="106" y="130" width="400" height="12" rx="2"/>
+                    <rect class="f p5" x="106" y="160" width="400" height="12" rx="2"/><rect class="f p6" x="106" y="190" width="400" height="12" rx="2"/>
+                    <rect class="f p7" x="106" y="220" width="400" height="12" rx="2"/><rect class="f p8" x="106" y="250" width="400" height="12" rx="2"/>
+                    <rect class="fa pst" x="366" y="190" width="140" height="12" rx="2"/>
+                    <path class="a pshow" d="M366 184v24"/>
+                  </g>
+                  <g class="lbl">
+                    <text x="518" y="50">c1</text><text x="518" y="80">c2</text><text x="518" y="110">c3</text><text x="518" y="140">c4</text>
+                    <text x="518" y="170">c5</text><text x="518" y="200">c6</text><text x="518" y="230">c7</text><text x="518" y="260">c8</text>
+                  </g>
+                  <text class="tk pshow" x="538" y="110">✓</text>
+                  <g class="pshow"><rect class="fa" x="538" y="189" width="40" height="15" rx="2"/><text class="ta" x="558" y="200" text-anchor="middle">+c3</text></g>
+                  <text class="tk pshow" x="106" y="290">c3 finished first → it takes half of what c6 has left</text>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <h3>Up to 32 connections, re-split as they go</h3>
+                <p>Each file is split into ranges that download side by side and land straight in place. When a connection finishes, it takes half of the biggest range still left, so none of them sit idle.</p>
+              </div>
             </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 8h18v8H3zM12 8v8M16.5 8v8"/><path d="M7.5 4.5 12 7M12 7l-1.2-2.6M12 7l-2.8.2"/></svg></span>
-              <h3>Re-splits as it goes</h3>
-              <p>A connection that finishes early takes over half of the largest range still left, so every connection stays busy to the last byte.</p>
-              <span class="tag">speed</span>
+            <!-- resume -->
+            <li class="tile t-tall">
+              <div class="tile-art">
+                <svg class="ill ill-res" viewBox="0 0 300 300" aria-hidden="true" focusable="false">
+                  <path class="k" d="M24 22h14l6 6v20H24z"/><path class="k" d="M38 22v6h6"/>
+                  <text class="tk" x="54" y="40">ubuntu.iso</text>
+                  <text class="r-t1" x="276" y="40" text-anchor="end">downloading</text>
+                  <text class="r-t2" x="276" y="40" text-anchor="end">stopped at 42%</text>
+                  <text class="r-t3 tk" x="276" y="40" text-anchor="end">resumed at 42%</text>
+                  <text class="r-t4 tk" x="276" y="40" text-anchor="end">done</text>
+                  <path class="a r-bolt" d="M136 58l-11 17h10l-8 15"/>
+                  <rect class="tr" x="24" y="96" width="252" height="14" rx="2"/>
+                  <rect class="f r-fill" x="24" y="96" width="252" height="14" rx="2"/>
+                  <path class="w" d="M49.2 116v6M74.4 116v6M99.6 116v6M150 116v6M175.2 116v6M200.4 116v6M225.6 116v6M250.8 116v6"/>
+                  <path class="a" d="M124.8 114v10"/>
+                  <text class="sm" x="24" y="142">a checkpoint every few seconds</text>
+                  <path class="w" d="M240 150v42"/>
+                  <circle class="fa a r-dot" cx="240" cy="150" r="4"/>
+                  <path class="k" d="M216 204a24 7 0 0 0 48 0a24 7 0 0 0-48 0"/><path class="k" d="M216 204v32a24 7 0 0 0 48 0v-32"/>
+                  <text class="tk" x="240" y="270" text-anchor="middle">state.json</text>
+                  <text class="sm" x="240" y="285" text-anchor="middle">on your disk</text>
+                  <path class="k" d="M33 209a10 10 0 1 0 14 0M40 204v10"/>
+                  <text class="r-p1" x="60" y="217">app running</text>
+                  <text class="r-p2 tk" x="60" y="217">power cut</text>
+                  <text class="r-p3" x="60" y="217">app started</text>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <h3>Survives power cuts and crashes</h3>
+                <p>Progress is checkpointed to disk every few seconds. When Byterush starts again, downloads carry on from the last checkpoint by themselves.</p>
+              </div>
             </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M19.5 12A7.5 7.5 0 1 1 17 6.4"/><path d="M19 3v4h-4"/><path d="M10 9.5v5M14 9.5v5"/></svg></span>
-              <h3>Survives restarts and crashes</h3>
-              <p>Pause anything. Progress is checkpointed to disk, so after a quit, a reboot or a crash, downloads carry on by themselves when Byterush starts. Dropped connections retry with backoff.</p>
-              <span class="tag">resume</span>
+            <!-- browser takeover -->
+            <li class="tile t-md">
+              <div class="tile-art">
+                <svg class="ill ill-take" viewBox="0 0 440 180" aria-hidden="true" focusable="false">
+                  <rect class="k" x="12" y="18" width="150" height="144" rx="6"/><path class="w" d="M12 40h150"/>
+                  <circle class="w" cx="24" cy="29" r="3"/><circle class="w" cx="34" cy="29" r="3"/><circle class="w" cx="44" cy="29" r="3"/>
+                  <rect class="w" x="56" y="24" width="96" height="10" rx="5"/><text class="xs" x="64" y="32">site.com</text>
+                  <path class="w" d="M26 58h96M26 70h120M26 82h72"/>
+                  <rect class="k" x="26" y="114" width="122" height="28" rx="4"/>
+                  <rect class="a t-click" x="26" y="114" width="122" height="28" rx="4"/>
+                  <text class="tk t-c1" x="38" y="132">↓ file.zip</text><text class="t-c2" x="38" y="132">→ byterush</text>
+                  <path class="w" d="M150 128C214 128 214 63 278 63"/><path class="k" d="M271 58l7 5-7 5"/>
+                  <g transform="translate(180 128)"><g class="t-badge"><rect class="k pg" x="-32" y="-10" width="64" height="20" rx="10"/><text class="tk xs" x="0" y="4" text-anchor="middle">cookies</text></g></g>
+                  <rect class="k" x="278" y="18" width="150" height="144" rx="6"/><path class="w" d="M278 40h150"/>
+                  <rect class="f" x="288" y="25" width="9" height="9" rx="2"/><text class="tk xs" x="302" y="33">byterush</text>
+                  <g class="t-row"><rect class="fa a" x="284" y="48" width="138" height="30" rx="3"/><text class="ta xs" x="292" y="61">file.zip</text><rect class="on-a" x="292" y="67" width="122" height="4" rx="1" opacity=".2"/><rect class="on-a t-bar" x="292" y="67" width="122" height="4" rx="1"/></g>
+                  <text class="xs" x="292" y="98">video.mp4</text><rect class="fm" x="292" y="104" width="122" height="4" rx="1"/>
+                  <text class="xs" x="292" y="132">setup.exe</text><rect class="fm" x="292" y="138" width="122" height="4" rx="1"/>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <h3>Takes over browser downloads</h3>
+                <p>Chrome and Edge hand each download over with their cookies, user agent and referer, so logins and bot checks carry over.</p>
+              </div>
             </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="15" rx="1.5"/><path d="M3 8h18M12 11v5m0 0-2.5-2.5M12 16l2.5-2.5"/></svg></span>
-              <h3>Takes over browser downloads</h3>
-              <p>The Chrome and Edge extension hands each download over with the browser's cookies, user agent and referer, so sign-ins and “verify you're human” checks carry over.</p>
-              <span class="tag">browser</span>
+            <!-- expired link -->
+            <li class="tile t-md">
+              <div class="tile-art">
+                <svg class="ill ill-exp" viewBox="0 0 440 180" aria-hidden="true" focusable="false">
+                  <g class="x-click"><path class="k pg" d="M110 14v20l5-5 4 9 3.5-1.5-4-9h7z"/><text x="134" y="30">click the link again</text></g>
+                  <rect class="kk x-left" x="136" y="62" width="96" height="36" rx="18"/>
+                  <rect class="kk x-right" x="208" y="62" width="96" height="36" rx="18"/>
+                  <path class="a x-spark" d="M214 56l-5-8M226 56l5-8M214 104l-5 8M226 104l5 8"/>
+                  <text class="x-l1" x="220" y="128" text-anchor="middle">link expired · 403</text>
+                  <g class="x-l2"><rect class="fa" x="170" y="116" width="100" height="17" rx="2"/><text class="ta" x="220" y="128" text-anchor="middle">same file ✓</text></g>
+                  <rect class="tr" x="70" y="144" width="300" height="8" rx="1"/>
+                  <rect class="fm" x="70" y="144" width="189" height="8" rx="1"/>
+                  <rect class="f x-was" x="70" y="144" width="189" height="8" rx="1"/>
+                  <rect class="f x-grow" x="259" y="144" width="111" height="8" rx="1"/>
+                  <text class="sm x-b1" x="70" y="170">paused at 63%</text>
+                  <text class="sm x-b2" x="70" y="170">continues from 63%, not from zero</text>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <h3>Expired link? Click it again</h3>
+                <p>When a download pauses or fails because its link expired, click the link again in the browser and it continues where it stopped.</p>
+              </div>
             </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 14a3.5 3.5 0 0 0 5 0l3.5-3.5a3.5 3.5 0 0 0-5-5L12.5 6.5"/><path d="M14 10a3.5 3.5 0 0 0-5 0l-3.5 3.5a3.5 3.5 0 0 0 5 5l1-1"/></svg></span>
-              <h3>Expired link? Click it again</h3>
-              <p>If a download paused or failed because its link expired, click the link again in the browser. Byterush picks up the fresh link and continues where it stopped, not from zero.</p>
-              <span class="tag">browser</span>
+            <!-- never loses -->
+            <li class="tile">
+              <div class="tile-art">
+                <svg class="ill ill-fork" viewBox="0 0 300 170" aria-hidden="true" focusable="false">
+                  <circle class="k pg" cx="30" cy="85" r="6"/><text class="xs" x="30" y="108" text-anchor="middle">download</text>
+                  <path class="w" d="M36 85H110"/>
+                  <path class="a" d="M110 85L150 42H222"/><path class="k" d="M110 85L150 128H222"/>
+                  <text class="xs" x="154" y="32">same file</text><text class="xs" x="154" y="148">anything else</text>
+                  <rect class="fa a" x="222" y="30" width="72" height="24" rx="4"/><text class="ta xs" x="258" y="46" text-anchor="middle">byterush</text>
+                  <rect class="k pg" x="222" y="116" width="72" height="24" rx="4"/><text class="tk xs" x="258" y="132" text-anchor="middle">browser</text>
+                  <circle class="fa a n-d1" cx="36" cy="85" r="4.5"/><circle class="f n-d2" cx="36" cy="85" r="4.5"/>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <h3>Never loses a download</h3>
+                <p>Byterush only takes over when the server sends the exact same file. Otherwise the browser keeps it.</p>
+              </div>
             </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.4-2.9 8-7 10-4.1-2-7-5.6-7-10V6z"/><path d="m9 12 2 2 4-4"/></svg></span>
-              <h3>Never loses a download</h3>
-              <p>Byterush only takes over when the server sends it the exact same file. If not, the browser keeps its download as if nothing happened.</p>
-              <span class="tag">browser</span>
+            <!-- queue -->
+            <li class="tile">
+              <div class="tile-art">
+                <svg class="ill ill-queue" viewBox="0 0 300 170" aria-hidden="true" focusable="false">
+                  <defs><clipPath id="clip-queue"><rect x="12" y="10" width="276" height="150"/></clipPath></defs>
+                  <g clip-path="url(#clip-queue)"><g class="q-list">
+                    <g class="q-r0"><rect class="w" x="16" y="14" width="268" height="30" rx="4"/><path class="k" d="M28 21h8l4 4v12H28z"/><rect class="tr" x="50" y="22" width="110" height="5" rx="1"/><rect class="tr" x="50" y="32" width="150" height="4" rx="1"/><rect class="f q-a" x="50" y="32" width="150" height="4" rx="1"/><text class="tk xs" x="272" y="34" text-anchor="end">4.1 MB/s</text></g>
+                    <g><rect class="w" x="16" y="50" width="268" height="30" rx="4"/><path class="k" d="M28 57h8l4 4v12H28z"/><rect class="tr" x="50" y="58" width="84" height="5" rx="1"/><rect class="tr" x="50" y="68" width="150" height="4" rx="1"/><rect class="f q-b" x="50" y="68" width="150" height="4" rx="1"/><text class="tk xs" x="272" y="70" text-anchor="end">3.8 MB/s</text></g>
+                    <g><rect class="w" x="16" y="86" width="268" height="30" rx="4"/><path class="k" d="M28 93h8l4 4v12H28z"/><rect class="tr" x="50" y="94" width="128" height="5" rx="1"/><rect class="tr" x="50" y="104" width="150" height="4" rx="1"/><rect class="f q-c" x="50" y="104" width="150" height="4" rx="1"/><text class="tk xs" x="272" y="106" text-anchor="end">2.9 MB/s</text></g>
+                    <g><rect class="w" x="16" y="122" width="268" height="30" rx="4"/><path class="w" d="M28 129h8l4 4v12H28z"/><rect class="tr" x="50" y="130" width="96" height="5" rx="1"/><rect class="tr" x="50" y="140" width="150" height="4" rx="1"/><text class="xs" x="272" y="142" text-anchor="end">queued</text></g>
+                    <g><rect class="w" x="16" y="158" width="268" height="30" rx="4"/><path class="w" d="M28 165h8l4 4v12H28z"/><rect class="tr" x="50" y="166" width="72" height="5" rx="1"/><circle class="w" cx="224" cy="174" r="5"/><path class="w" d="M224 171v3l2 2"/><rect class="fa" x="234" y="166" width="40" height="15" rx="2"/><text class="ta xs" x="254" y="177" text-anchor="middle">later</text></g>
+                  </g></g>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <h3>Queue and “download later”</h3>
+                <p>Three at a time by default. The rest wait their turn, or wait for later.</p>
+              </div>
             </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h11M4 11h11M4 16h6"/><circle cx="17" cy="16" r="4"/><path d="M17 14v2l1.3 1.3"/></svg></span>
-              <h3>Queue and “download later”</h3>
-              <p>Choose how many downloads run at once (three by default) and the rest wait their turn. Park anything for later and start it when it suits you.</p>
-              <span class="tag">queue</span>
+            <!-- speed cap -->
+            <li class="tile">
+              <div class="tile-art">
+                <svg class="ill ill-cap" viewBox="0 0 300 170" aria-hidden="true" focusable="false">
+                  <path class="w" d="M50 138A100 100 0 0 1 250 138"/>
+                  <path class="k c-arc" d="M50 138A100 100 0 0 1 250 138"/>
+                  <path class="w" d="M66 138L54 138M65.4 110.5L58.7 108.3M78 85.7L72.3 81.6M97.7 66L93.6 60.3M122.5 53.4L120.3 46.7M150 54L150 42M177.5 53.4L179.7 46.7M202.3 66L206.4 60.3M222 85.7L227.7 81.6M234.6 110.5L241.3 108.3M234 138L246 138"/>
+                  <path class="a" d="M197 73.3L211.1 53.9"/>
+                  <rect class="fa" x="214" y="30" width="34" height="15" rx="2"/><text class="ta xs" x="231" y="41" text-anchor="middle">cap</text>
+                  <path class="kk c-needle" d="M150 138V62"/><circle class="f" cx="150" cy="138" r="5"/>
+                  <text class="xs" x="50" y="156" text-anchor="middle">0</text><text class="xs" x="250" y="156" text-anchor="middle">max</text>
+                  <text class="tk xs" x="150" y="162" text-anchor="middle">20 MB/s for all downloads</text>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <h3>Global speed cap</h3>
+                <p>One limit for every download, switched on from the toolbar.</p>
+              </div>
             </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 16a8 8 0 1 1 16 0"/><path d="m12 16 3.5-4.5"/><path d="M3 20h18"/></svg></span>
-              <h3>Global speed cap</h3>
-              <p>One limit for every download, switched on from the toolbar, so video calls and streams in the house stay smooth.</p>
-              <span class="tag">queue</span>
+            <!-- folders -->
+            <li class="tile">
+              <div class="tile-art">
+                <svg class="ill ill-fold" viewBox="0 0 300 170" aria-hidden="true" focusable="false">
+                  <g class="f-file f1"><path class="k pg" d="M42 10h16l8 8v22H42z"/><path class="k" d="M58 10v8h8"/><text class="xxs" x="54" y="34" text-anchor="middle">.mp4</text></g>
+                  <g class="f-file f2"><path class="k pg" d="M138 10h16l8 8v22H138z"/><path class="k" d="M154 10v8h8"/><text class="xxs" x="150" y="34" text-anchor="middle">.mp3</text></g>
+                  <g class="f-file f3"><path class="k pg" d="M234 10h16l8 8v22H234z"/><path class="k" d="M250 10v8h8"/><text class="xxs" x="246" y="34" text-anchor="middle">.pdf</text></g>
+                  <path class="k pg" d="M24 104h20l5 5h35v33H24z"/><path class="k pg" d="M120 104h20l5 5h35v33H120z"/><path class="k pg" d="M216 104h20l5 5h35v33H216z"/>
+                  <path class="a f-flash f1" d="M24 104h20l5 5h35v33H24z"/><path class="a f-flash f2" d="M120 104h20l5 5h35v33H120z"/><path class="a f-flash f3" d="M216 104h20l5 5h35v33H216z"/>
+                  <text class="tk xs" x="54" y="162" text-anchor="middle">Video</text><text class="tk xs" x="150" y="162" text-anchor="middle">Music</text><text class="tk xs" x="246" y="162" text-anchor="middle">Documents</text>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <h3>Sorted into folders</h3>
+                <p>Video, music, documents, archives and programs each get their own folder.</p>
+              </div>
             </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M7 11h10M7 15h6"/></svg></span>
-              <h3>Sorted into folders</h3>
-              <p>Video, music, documents, archives and programs each land in their own folder, without you picking one every time.</p>
-              <span class="tag">files</span>
+            <!-- batch -->
+            <li class="tile">
+              <div class="tile-art">
+                <svg class="ill ill-batch" viewBox="0 0 300 170" aria-hidden="true" focusable="false">
+                  <rect class="k pg" x="12" y="66" width="112" height="38" rx="6"/>
+                  <text class="tk" x="24" y="84">img*.jpg</text><text class="xs" x="24" y="98">001 – 250</text>
+                  <g class="b-i b1"><path class="w" d="M124 85C144 85 144 22 164 22"/><rect class="k pg" x="164" y="11" width="124" height="22" rx="4"/><text class="xs" x="176" y="26">img001.jpg</text></g>
+                  <g class="b-i b2"><path class="w" d="M124 85C144 85 144 52 164 52"/><rect class="k pg" x="164" y="41" width="124" height="22" rx="4"/><text class="xs" x="176" y="56">img002.jpg</text></g>
+                  <g class="b-i b3"><path class="w" d="M124 85C144 85 144 85 164 85"/><rect class="k pg" x="164" y="74" width="124" height="22" rx="4"/><text class="xs" x="176" y="89">img003.jpg</text></g>
+                  <g class="b-i b4"><path class="w" d="M124 85C144 85 144 118 164 118"/><text class="xs" x="176" y="122">…</text></g>
+                  <g class="b-i b5"><path class="w" d="M124 85C144 85 144 148 164 148"/><rect class="fa a" x="164" y="137" width="124" height="22" rx="4"/><text class="ta xs" x="176" y="152">img250.jpg</text></g>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <h3>Batch downloads</h3>
+                <p>One pattern with a number range and zero padding queues the whole series.</p>
+              </div>
             </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1"/><path d="M17.25 14v6M14.5 15.5l5.5 3M14.5 18.5l5.5-3"/></svg></span>
-              <h3>Batch downloads</h3>
-              <p><code>site.com/img*.jpg</code> with a number range and zero padding queues <code>img001.jpg</code> to <code>img250.jpg</code> in one go.</p>
-              <span class="tag">files</span>
+            <!-- clipboard -->
+            <li class="tile">
+              <div class="tile-art">
+                <svg class="ill ill-clip" viewBox="0 0 300 170" aria-hidden="true" focusable="false">
+                  <rect class="sel c-sel" x="78" y="24" width="162" height="17" rx="2"/>
+                  <text class="xs" x="14" y="36">get it:</text><text class="tk xs" x="80" y="36">https://dl.site/file.zip</text>
+                  <g class="c-key"><rect class="k pg" x="170" y="52" width="40" height="20" rx="3"/><text class="xs" x="190" y="66" text-anchor="middle">ctrl</text><rect class="k pg" x="216" y="52" width="22" height="20" rx="3"/><text class="xs" x="227" y="66" text-anchor="middle">c</text></g>
+                  <g class="c-toast">
+                    <rect class="k pg" x="40" y="94" width="248" height="62" rx="6"/>
+                    <rect class="f" x="54" y="108" width="12" height="12" rx="2"/>
+                    <text class="tk" x="74" y="118">Download file.zip?</text>
+                    <text class="xs" x="74" y="136">copied link · 212 MB</text>
+                    <rect class="fa a c-btn" x="210" y="124" width="66" height="22" rx="3"/><text class="ta xs" x="243" y="139" text-anchor="middle">download</text>
+                  </g>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <h3>Clipboard monitor</h3>
+                <p>Copy a link to a file anywhere and Byterush offers to download it.</p>
+              </div>
             </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4.5" width="14" height="16.5" rx="1.5"/><path d="M9 4.5V3h6v1.5M8.5 10h7M8.5 14h4.5"/></svg></span>
-              <h3>Clipboard monitor</h3>
-              <p>Copy a link to a file anywhere and Byterush offers to download it. No pasting, no switching windows.</p>
-              <span class="tag">files</span>
+            <!-- temp folder -->
+            <li class="tile">
+              <div class="tile-art">
+                <svg class="ill ill-temp" viewBox="0 0 300 170" aria-hidden="true" focusable="false">
+                  <path class="w" d="M34 42v-6M46 42v-6M58 42v-6M70 42v-6M82 42v-6M94 42v-6M106 42v-6"/>
+                  <rect class="k pg" x="16" y="42" width="110" height="66" rx="6"/>
+                  <text class="tk" x="28" y="62">SSD</text><text class="xs" x="28" y="76">temporary</text>
+                  <rect class="tr" x="28" y="88" width="86" height="8" rx="1"/><rect class="f m-fill" x="28" y="88" width="86" height="8" rx="1"/>
+                  <path class="w" d="M132 75h34"/><path class="k" d="M160 70l6 5-6 5"/>
+                  <rect class="k pg" x="174" y="42" width="110" height="66" rx="6"/>
+                  <rect class="a m-flash" x="174" y="42" width="110" height="66" rx="6"/>
+                  <circle class="w" cx="258" cy="75" r="18"/><circle class="k" cx="258" cy="75" r="3"/><path class="w" d="M258 75l-12 12"/>
+                  <text class="tk" x="186" y="62">HDD</text>
+                  <g class="m-file"><path class="k pg" d="M108 64h12l6 6v16H108z"/><path class="k" d="M120 64v6h6"/></g>
+                  <text class="xs" x="71" y="128" text-anchor="middle">partial files</text><text class="xs" x="229" y="128" text-anchor="middle">finished files</text>
+                  <text class="xs" x="150" y="156" text-anchor="middle">moved, or copied across drives</text>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <h3>Temporary folder on a fast drive</h3>
+                <p>Partial files live on an SSD while they download, then move to their folder.</p>
+              </div>
             </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="1.5"/><path d="M6.5 12h6"/><circle cx="17" cy="12" r="1"/></svg></span>
-              <h3>Temporary folder on a fast drive</h3>
-              <p>Partial files can live on an SSD while they download. Finished files move to their folder, copied across drives when needed.</p>
-              <span class="tag">files</span>
+            <!-- thousands of files -->
+            <li class="tile">
+              <div class="tile-art">
+                <svg class="ill ill-list" viewBox="0 0 300 170" aria-hidden="true" focusable="false">
+                  <defs><clipPath id="clip-list"><rect x="13" y="37" width="258" height="104"/></clipPath></defs>
+                  <rect class="k pg" x="12" y="10" width="276" height="150" rx="6"/>
+                  <text class="xs" x="40" y="28">name</text><text class="xs" x="252" y="28" text-anchor="end">size</text><path class="w" d="M12 36h276"/>
+                  <g clip-path="url(#clip-list)"><g class="v-rows">
+                    <path class="w" d="M24 43h6l3 3v9H24zM24 65h6l3 3v9H24zM24 87h6l3 3v9H24zM24 109h6l3 3v9H24zM24 131h6l3 3v9H24zM24 153h6l3 3v9H24zM24 175h6l3 3v9H24zM24 197h6l3 3v9H24zM24 219h6l3 3v9H24zM24 241h6l3 3v9H24zM24 263h6l3 3v9H24zM24 285h6l3 3v9H24z"/>
+                    <rect class="tr" x="40" y="46" width="120" height="6" rx="1"/><rect class="tr" x="40" y="68" width="90" height="6" rx="1"/><rect class="tr" x="40" y="90" width="140" height="6" rx="1"/><rect class="tr" x="40" y="112" width="104" height="6" rx="1"/><rect class="tr" x="40" y="134" width="76" height="6" rx="1"/><rect class="tr" x="40" y="156" width="128" height="6" rx="1"/>
+                    <rect class="tr" x="40" y="178" width="120" height="6" rx="1"/><rect class="tr" x="40" y="200" width="90" height="6" rx="1"/><rect class="tr" x="40" y="222" width="140" height="6" rx="1"/><rect class="tr" x="40" y="244" width="104" height="6" rx="1"/><rect class="tr" x="40" y="266" width="76" height="6" rx="1"/><rect class="tr" x="40" y="288" width="128" height="6" rx="1"/>
+                    <path class="w" d="M222 49h30M222 71h30M222 93h30M222 115h30M222 137h30M222 159h30M222 181h30M222 203h30M222 225h30M222 247h30M222 269h30M222 291h30"/>
+                  </g></g>
+                  <path class="w" d="M281 40v98"/><rect class="f v-thumb" x="279" y="40" width="4" height="22" rx="2"/>
+                  <path class="w" d="M12 142h276"/>
+                  <text class="xs" x="22" y="155">12,480 items</text>
+                  <rect class="fa" x="112" y="145" width="124" height="14" rx="2"/><text class="ta xs" x="174" y="156" text-anchor="middle">visible rows only</text>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <h3>Thousands of files</h3>
+                <p>A virtualized list draws only the rows you can see, so huge queues stay smooth.</p>
+              </div>
             </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4.5h16M4 9h16M4 13.5h16M4 18h10"/><path d="M18 16v5m0 0-2-2m2 2 2-2"/></svg></span>
-              <h3>Thousands of files</h3>
-              <p>A virtualized list that only redraws the rows that changed stays smooth with thousands of downloads, and a whole batch is queued in one call.</p>
-              <span class="tag">scale</span>
-            </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" class="fill"/></svg></span>
-              <h3>Light and dark</h3>
-              <p>Follows your system theme, in the same plain monospace look as this page.</p>
-              <span class="tag">look</span>
-            </li>
-            <li class="feat">
-              <span class="glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="1.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3M12 14.5v2"/></svg></span>
-              <h3>No account, no telemetry</h3>
-              <p>Nothing to sign up for and nothing sent home. The bridge for the browser extension only listens on <code>127.0.0.1</code>.</p>
-              <span class="tag">privacy</span>
+            <!-- privacy -->
+            <li class="tile">
+              <div class="tile-art">
+                <svg class="ill ill-priv" viewBox="0 0 300 170" aria-hidden="true" focusable="false">
+                  <rect class="w" x="8" y="16" width="202" height="142" rx="10"/><text class="xs" x="20" y="35">your computer</text>
+                  <rect class="k pg" x="18" y="62" width="76" height="30" rx="4"/><text class="tk xs" x="56" y="81" text-anchor="middle">extension</text>
+                  <rect class="k pg" x="126" y="62" width="76" height="30" rx="4"/><text class="tk xs" x="164" y="81" text-anchor="middle">byterush</text>
+                  <path class="w" d="M94 77h32"/>
+                  <rect class="fa" x="77" y="44" width="66" height="14" rx="2"/><text class="ta xs" x="110" y="55" text-anchor="middle">127.0.0.1</text>
+                  <circle class="fa a p-dot" cx="98" cy="77" r="3.5"/>
+                  <path class="k" d="M103 120v-5a7 7 0 0 1 14 0v5"/><rect class="k pg" x="98" y="120" width="24" height="18" rx="3"/><circle class="f" cx="110" cy="128" r="2"/>
+                  <text class="xs" x="110" y="152" text-anchor="middle">no account</text>
+                  <path class="w" d="M210 77h22"/>
+                  <path class="w" d="M244 90h34a9 9 0 0 0 0-18a13 13 0 0 0-25-4a9 9 0 0 0-9 22z"/>
+                  <path class="k" d="M252 70l18 18M270 70l-18 18"/>
+                  <text class="xs" x="261" y="112" text-anchor="middle">no telemetry</text>
+                </svg>
+              </div>
+              <div class="tile-body">
+                <h3>No account, no telemetry</h3>
+                <p>The browser bridge only listens on <code>127.0.0.1</code>, and nothing is sent home.</p>
+              </div>
             </li>
           </ul>
         </section>
 
-        <!-- 03 how it works -->
+        <!-- 04 how it works -->
         <section class="block" id="how" aria-labelledby="how-title">
-          <p class="kicker"><span aria-hidden="true">[*]</span> 03 · how it works</p>
+          <p class="kicker"><span aria-hidden="true">[*]</span> 04 · how it works</p>
           <h2 id="how-title">One file, many ranges, no idle connections</h2>
           <p class="lead">Byterush asks the server for different parts of the same file at once. Here is a 4 GB file over eight connections.</p>
 
@@ -285,9 +576,9 @@
           </ol>
         </section>
 
-        <!-- 04 extension -->
+        <!-- 05 extension -->
         <section class="block" id="extension" aria-labelledby="extension-title">
-          <p class="kicker"><span aria-hidden="true">[*]</span> 04 · browser extension</p>
+          <p class="kicker"><span aria-hidden="true">[*]</span> 05 · browser extension</p>
           <h2 id="extension-title">Your browser starts it. Byterush finishes it.</h2>
           <div class="ext">
             <div class="ext-copy">
@@ -332,18 +623,31 @@
           </figure>
 
           <h3 class="sub">Install the extension</h3>
-          <ol class="install">
-            <li><span class="step-n">01</span><div>Install Byterush and open <strong>Settings → browser → open folder</strong>. That is the <code>extension</code> folder shipped with the app.</div></li>
-            <li><span class="step-n">02</span><div>In Chrome go to <code>chrome://extensions</code> (in Edge, <code>edge://extensions</code>) and switch on <strong>Developer mode</strong>.</div></li>
-            <li><span class="step-n">03</span><div>Click <strong>Load unpacked</strong> and choose the <code>extension</code> folder.</div></li>
-            <li><span class="step-n">04</span><div>Done. New downloads in that browser now go to the app, cookies and all. Pin the icon to see recent hand-overs.</div></li>
-          </ol>
-          <a class="button button-ghost" href="https://github.com/zecod/byterush#browser-extension" data-link="extension">Extension details on GitHub <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4"/></svg></a>
+          <div class="install-wrap">
+            <ol class="install">
+              <li><span class="step-n">01</span><div>Install Byterush and open <strong>Settings → browser → open folder</strong>. That is the <code>extension</code> folder shipped with the app. You can also download the extension as a <code>.zip</code> from the release and unzip it.</div></li>
+              <li><span class="step-n">02</span><div>In Chrome go to <code>chrome://extensions</code> (in Edge, <code>edge://extensions</code>) and switch on <strong>Developer mode</strong>.</div></li>
+              <li><span class="step-n">03</span><div>Click <strong>Load unpacked</strong> and choose the <code>extension</code> folder.</div></li>
+              <li><span class="step-n">04</span><div>Done. New downloads in that browser now go to the app, cookies and all. Pin the icon to see recent hand-overs.</div></li>
+            </ol>
+            <div class="xmock" aria-hidden="true">
+              <div class="xm-bar"><i></i><i></i><i></i><span class="xm-url">chrome://extensions</span></div>
+              <div class="xm-head"><b>Extensions</b><span class="xm-dev"><span class="xm-n">02</span>Developer mode<span class="p-switch on"></span></span></div>
+              <div class="xm-actions"><span class="xm-btn hi"><span class="xm-n">03</span>Load unpacked</span><span class="xm-btn">Pack extension</span><span class="xm-btn">Update</span></div>
+              <div class="xm-card">
+                <img src="assets/icon-16.svg" alt="" width="28" height="28" />
+                <span><b>Byterush — download catcher</b><small>Hands your browser downloads to the Byterush app.</small></span>
+                <span class="p-switch on"></span>
+              </div>
+            </div>
+          </div>
+          <div class="ext-actions"><a class="button button-solid" href="https://github.com/zecod/byterush/releases/latest" data-ext-zip><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg>Extension .zip<span class="button-meta" data-size></span></a>
+          <a class="button button-ghost" href="https://github.com/zecod/byterush#browser-extension" data-link="extension">Extension details on GitHub <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4"/></svg></a></div>
         </section>
 
-        <!-- 05 comparison -->
+        <!-- 06 comparison -->
         <section class="block" id="compare" aria-labelledby="compare-title">
-          <p class="kicker"><span aria-hidden="true">[*]</span> 05 · compared</p>
+          <p class="kicker"><span aria-hidden="true">[*]</span> 06 · compared</p>
           <h2 id="compare-title">Byterush and a plain browser download</h2>
           <p class="lead">What changes when Byterush takes over a download from Chrome or Edge.</p>
           <div class="table-wrap">
@@ -366,9 +670,9 @@
           </div>
         </section>
 
-        <!-- 06 download -->
+        <!-- 07 download -->
         <section class="block" id="download" aria-labelledby="download-title">
-          <p class="kicker"><span aria-hidden="true">[*]</span> 06 · download</p>
+          <p class="kicker"><span aria-hidden="true">[*]</span> 07 · download</p>
           <h2 id="download-title">Download Byterush</h2>
           <p class="lead"><span data-release-line>Free for Windows, macOS and Linux. Every build comes from the latest GitHub release.</span></p>
           <p class="sample" data-mobile-note hidden><span aria-hidden="true">[i]</span> Byterush is a desktop app. Open this page on your Windows, macOS or Linux computer to install it there.</p>
@@ -402,21 +706,28 @@
                 <h3 id="p-linux"><span class="os-glyph" aria-hidden="true">[tux]</span>Linux</h3>
                 <span class="detected" hidden>your system</span>
               </header>
-              <p class="req">64-bit (x64) distributions</p>
+              <p class="req">64-bit · x64 and arm64</p>
+              <p class="b-arch">x64</p>
               <ul class="builds">
                 <li><a href="https://github.com/zecod/byterush/releases/latest" data-build="linux-appimage"><span class="b-name">AppImage</span><span class="b-ext">.AppImage</span><span class="b-size" data-size></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg></a></li>
                 <li><a href="https://github.com/zecod/byterush/releases/latest" data-build="linux-deb"><span class="b-name">Debian, Ubuntu</span><span class="b-ext">.deb</span><span class="b-size" data-size></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg></a></li>
                 <li><a href="https://github.com/zecod/byterush/releases/latest" data-build="linux-rpm"><span class="b-name">Fedora, openSUSE</span><span class="b-ext">.rpm</span><span class="b-size" data-size></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg></a></li>
               </ul>
-              <p class="p-note">The AppImage runs on most distributions: make it executable and open it.</p>
+              <div class="b-chips">
+                <span class="b-arch">arm64</span>
+                <a href="https://github.com/zecod/byterush/releases/latest" data-build="linux-appimage-arm" aria-label="AppImage for arm64">.AppImage</a>
+                <a href="https://github.com/zecod/byterush/releases/latest" data-build="linux-deb-arm" aria-label=".deb for arm64">.deb</a>
+                <a href="https://github.com/zecod/byterush/releases/latest" data-build="linux-rpm-arm" aria-label=".rpm for arm64">.rpm</a>
+              </div>
+              <p class="p-note">The AppImage runs on most distributions: make it executable and open it. The arm64 builds are for ARM computers running 64-bit Linux.</p>
             </article>
           </div>
-          <p class="dl-foot">Older versions and every file of a release are on <a class="underline" href="https://github.com/zecod/byterush/releases" data-link="allReleases">GitHub Releases</a>. Rather build it yourself? See <a class="underline" href="https://github.com/zecod/byterush#development" data-link="source">building from source</a>.</p>
+          <p class="dl-foot">Older versions and every file of a release are on <a class="underline" href="https://github.com/zecod/byterush/releases" data-link="allReleases">GitHub Releases</a>. Rather build it yourself? See <a class="underline" href="https://github.com/zecod/byterush#development" data-link="source">building from source</a>. To check a download, compare it with the release's <a class="underline" href="https://github.com/zecod/byterush/releases/latest" data-checksums>SHA256SUMS.txt</a>.</p>
         </section>
 
-        <!-- 07 faq -->
+        <!-- 08 faq -->
         <section class="block" id="faq" aria-labelledby="faq-title">
-          <p class="kicker"><span aria-hidden="true">[*]</span> 07 · questions</p>
+          <p class="kicker"><span aria-hidden="true">[*]</span> 08 · questions</p>
           <h2 id="faq-title">FAQ</h2>
           <ul class="faq">
             <li><details><summary><span class="plus" aria-hidden="true"></span>Is Byterush really free? Is it open source?</summary><div class="answer"><p>Yes to both. There are no plans, ads, trials or accounts. The full source of the app and the extension is <a class="underline" href="https://github.com/zecod/byterush" data-link="github">on GitHub</a>, and you can build it yourself.</p></div></details></li>
@@ -435,7 +746,7 @@
             <li><details><summary><span class="plus" aria-hidden="true"></span>What happens when a download link expires?</summary><div class="answer"><p>Many sites hand out links that only work for a few minutes or hours. If a download pauses or fails because of that, go back to the page and click the link again. The extension sends the fresh link to Byterush, which continues the existing download from where it stopped instead of starting over.</p></div></details></li>
             <li><details><summary><span class="plus" aria-hidden="true"></span>What if my computer restarts or the app crashes?</summary><div class="answer"><p>Progress is checkpointed to disk as it downloads. Next time Byterush starts, unfinished downloads resume from their last checkpoint by themselves.</p></div></details></li>
             <li><details><summary><span class="plus" aria-hidden="true"></span>Do I need the extension?</summary><div class="answer"><p>No. You can paste a link with “+ add url”, let the clipboard monitor offer copied links, or queue a whole pattern with a batch download. The extension just makes it automatic for downloads that start in Chrome or Edge.</p></div></details></li>
-            <li><details><summary><span class="plus" aria-hidden="true"></span>Which systems and browsers are supported?</summary><div class="answer"><p>Windows 10 and 11 (x64), macOS 11 or later on Apple Silicon and Intel, and 64-bit Linux as an AppImage, a <code>.deb</code> or an <code>.rpm</code>. The extension is built for Chrome and Edge; there is no Firefox version yet.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Which systems and browsers are supported?</summary><div class="answer"><p>Windows 10 and 11 (x64), macOS 11 or later on Apple Silicon and Intel, and 64-bit Linux, x64 and arm64, as an AppImage, a <code>.deb</code> or an <code>.rpm</code>. The extension is built for Chrome and Edge; there is no Firefox version yet.</p></div></details></li>
             <li><details><summary><span class="plus" aria-hidden="true"></span>Where are settings and download data stored?</summary><div class="answer">
               <p>In your system's app-data folder, on your computer only:</p>
               <dl class="paths">
@@ -457,5 +768,14 @@
       </footer>
     </div>
     <div class="legal"><span>©2026 Byterush</span><span>Free and open source</span><a href="https://github.com/zecod/byterush" data-link="github">Source</a></div>
+    <dialog class="lightbox" aria-label="Byterush intro video" data-lightbox>
+      <div class="lb-box">
+        <button class="lb-close" type="button" aria-label="Close the video" data-lb-close><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+        <div class="player-frame">
+          <video class="player-video" controls playsinline preload="none" poster="assets/video/intro.jpg" width="1920" height="1080" aria-label="Byterush intro" data-lb-video></video>
+          <p class="player-msg" data-lb-msg hidden>The intro video isn't available yet. Check back soon.</p>
+        </div>
+      </div>
+    </dialog>
   </body>
 </html>
