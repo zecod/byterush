@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 64 64">
   <title>Byterush</title>
-  <rect x="0.5" y="0.5" width="63" height="63" rx="14" fill="#141111" stroke="#2a2525"/>
-  <g transform="translate(32 32) scale(1.14) translate(-32 -32)"><g fill="#f1ecec"><rect x="18" y="21" width="6" height="13" rx="1"/><rect x="29" y="17" width="6" height="21" rx="1"/><rect x="40" y="13" width="6" height="21" rx="1"/><path d="M14 37h8l10 10 10-10h8L32 55z"/></g><rect x="29" y="9" width="6" height="6" rx="1" fill="#f6fa89"/></g>
+  <rect x="0.5" y="0.5" width="63" height="63" rx="14" fill="#0a0a0a" stroke="#262626"/>
+  <g transform="translate(32 32) scale(1.14) translate(-32 -32)"><g fill="#ffffff"><rect x="18" y="21" width="6" height="13" rx="1"/><rect x="29" y="17" width="6" height="21" rx="1"/><rect x="40" y="13" width="6" height="21" rx="1"/><path d="M14 37h8l10 10 10-10h8L32 55z"/></g><rect x="29" y="9" width="6" height="6" rx="1" fill="#ffffff"/></g>
 </svg>
