@@ -19,11 +19,15 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 tokio-util = "0.7"
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "charset"] }
+# system-proxy: follow the Windows/macOS proxy settings like the browser does (a different route or
+# IP than the browser's gets 403 from sites that tie a session to it); native roots: trust the
+# certificates the OS trusts (company proxies, private CAs) besides the bundled ones
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "rustls-tls-native-roots", "system-proxy", "stream", "charset"] }
 futures-util = "0.3"
 uuid = { version = "1", features = ["v4"] }
 url = "2"

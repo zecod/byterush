@@ -115,13 +115,23 @@ export function SettingsDialog({ settings, onSave, onClose }: Props) {
         </div>
         <label className="field">
           <span>user-agent</span>
-          <input value={s.user_agent} onChange={(e) => set("user_agent", e.target.value)} spellCheck={false} />
+          <input
+            value={s.user_agent}
+            placeholder="automatic · byterush's own"
+            onChange={(e) => set("user_agent", e.target.value)}
+            spellCheck={false}
+          />
+          <small>leave empty unless a site needs a specific one: posing as a browser makes some sites send a web page instead of the file. downloads from the extension use the browser's own.</small>
         </label>
 
         <h3>03 · browser</h3>
         <BrowserSection enabled={s.browser_integration} onChange={(v) => set("browser_integration", v)} />
 
         <h3>04 · behaviour</h3>
+        <label className="check">
+          <input type="checkbox" checked={s.resume_on_startup} onChange={(e) => set("resume_on_startup", e.target.checked)} />
+          <span>continue unfinished downloads when byterush starts (after a restart or a crash)</span>
+        </label>
         <label className="check">
           <input type="checkbox" checked={s.monitor_clipboard} onChange={(e) => set("monitor_clipboard", e.target.checked)} />
           <span>offer to download links copied to the clipboard</span>

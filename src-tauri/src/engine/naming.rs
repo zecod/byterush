@@ -2,6 +2,7 @@
 
 use super::types::Category;
 use percent_encoding::percent_decode_str;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 const COMPRESSED: &[&str] = &["zip", "rar", "7z", "tar", "gz", "bz2", "xz", "tgz", "iso", "cab", "zst", "lz", "lzh", "arj"];
@@ -98,8 +99,8 @@ pub fn from_url(url: &url::Url) -> Option<String> {
 }
 
 /// `dir/name`, or `dir/name (n).ext` if taken on disk or by `reserved`.
-pub fn unique_path(dir: &Path, name: &str, reserved: &[PathBuf]) -> PathBuf {
-    let taken = |p: &Path| p.exists() || part_path(p).exists() || reserved.iter().any(|r| r == p);
+pub fn unique_path(dir: &Path, name: &str, reserved: &HashSet<PathBuf>) -> PathBuf {
+    let taken = |p: &Path| reserved.contains(p) || p.exists() || part_path(p).exists();
     let first = dir.join(name);
     if !taken(&first) {
         return first;
@@ -115,9 +116,36 @@ pub fn unique_path(dir: &Path, name: &str, reserved: &[PathBuf]) -> PathBuf {
 
 /// Temporary file used while downloading.
 pub fn part_path(target: &Path) -> PathBuf {
-    let mut s = target.as_os_str().to_owned();
-    s.push(".byterush");
+    with_suffix(target, ".byterush")
+}
+
+/// Where the finished file is assembled before it is renamed into place, so a crash while
+/// rebuilding or copying never leaves a half-written file under the real name.
+pub fn staging_path(target: &Path) -> PathBuf {
+    with_suffix(target, ".byterush-tmp")
+}
+
+fn with_suffix(path: &Path, suffix: &str) -> PathBuf {
+    let mut s = path.as_os_str().to_owned();
+    s.push(suffix);
     PathBuf::from(s)
+}
+
+/// Whether a name the browser suggests is the file an existing download is saving, allowing for
+/// the " (1)" the app adds to avoid overwriting.
+pub fn same_file(suggested: &str, saved: &str) -> bool {
+    let suggested = sanitize(suggested);
+    if suggested.eq_ignore_ascii_case(saved) {
+        return true;
+    }
+    let path = Path::new(saved);
+    let stem = path.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
+    let ext = path.extension().map(|e| format!(".{}", e.to_string_lossy())).unwrap_or_default();
+    let base = match stem.rsplit_once(" (") {
+        Some((base, n)) if n.strip_suffix(')').is_some_and(|n| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit())) => base,
+        _ => return false,
+    };
+    suggested.eq_ignore_ascii_case(&format!("{base}{ext}"))
 }
 
 #[cfg(test)]
@@ -143,5 +171,15 @@ mod tests {
         assert!(looks_like_download("https://x.com/files/a.zip"));
         assert!(!looks_like_download("https://x.com/page"));
         assert!(!looks_like_download("hello world.zip"));
+    }
+
+    #[test]
+    fn recaptured_names_match() {
+        assert!(same_file("setup.exe", "setup.exe"));
+        assert!(same_file("Setup.EXE", "setup.exe"));
+        assert!(same_file("setup.exe", "setup (2).exe"));
+        assert!(!same_file("setup.exe", "setup (x).exe"));
+        assert!(!same_file("setup.exe", "other.exe"));
+        assert!(!same_file("setup (2).exe", "setup.exe"));
     }
 }

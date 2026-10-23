@@ -58,8 +58,15 @@ fn open_extension_folder(app: AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command(async)]
-fn sync_downloads(resync: State<'_, Resync>) {
+fn sync_downloads(manager: State<'_, Manager>, resync: State<'_, Resync>) {
     resync.0.store(true, Ordering::Relaxed);
+    manager.poke();
+}
+
+/// Give an unfinished download a new address (its link expired) and continue it.
+#[tauri::command]
+async fn refresh_download(manager: State<'_, Manager>, id: String, url: String) -> Result<(), String> {
+    manager.refresh(&id, &url).await
 }
 
 #[tauri::command(async)]
@@ -129,42 +136,48 @@ fn reveal_download(app: AppHandle, manager: State<'_, Manager>, id: String) -> R
     }
 }
 
-/// Push changed rows to the UI while something changes, and persist progress periodically.
+/// Push changed rows to the UI: right away when the list or a status changes, every 400 ms while
+/// something downloads. Between list changes only running downloads can move, so only they are read.
 fn spawn_progress_loop(app: AppHandle, manager: Manager, resync: Arc<AtomicBool>) {
     tauri::async_runtime::spawn(async move {
         let mut last_version = 0;
-        let mut ticks = 0u64;
         let mut sent: HashMap<String, DownloadView> = HashMap::new();
         loop {
-            tokio::time::sleep(Duration::from_millis(400)).await;
-            let active = manager.has_active();
-            let version = manager.version();
-            let full = resync.swap(false, Ordering::Relaxed);
-            if full || active || version != last_version {
-                last_version = version;
-                if full {
-                    sent.clear();
+            tokio::select! {
+                _ = tokio::time::sleep(Duration::from_millis(400)) => {}
+                _ = manager.wait_for_change() => {
+                    // let a burst of changes (a batch, pause all) land in one update
+                    tokio::time::sleep(Duration::from_millis(16)).await;
                 }
-                let rows = manager.snapshot(false);
+            }
+            let full = resync.swap(false, Ordering::Relaxed);
+            let version = manager.version();
+            let listed = full || version != last_version;
+            if !listed && !manager.has_active() {
+                continue;
+            }
+            last_version = version;
+            if full {
+                sent.clear();
+            }
+            let rows = if listed { manager.snapshot(false) } else { manager.snapshot_running() };
+            let mut removed = Vec::new();
+            if listed {
                 let ids: HashSet<&str> = rows.iter().map(|r| r.record.id.as_str()).collect();
-                let removed: Vec<String> = sent.keys().filter(|k| !ids.contains(k.as_str())).cloned().collect();
+                removed = sent.keys().filter(|k| !ids.contains(k.as_str())).cloned().collect();
                 for id in &removed {
                     sent.remove(id);
                 }
-                let mut upserts = Vec::new();
-                for row in rows {
-                    if sent.get(&row.record.id) != Some(&row) {
-                        sent.insert(row.record.id.clone(), row.clone());
-                        upserts.push(row);
-                    }
-                }
-                if full || !upserts.is_empty() || !removed.is_empty() {
-                    let _ = app.emit("downloads-delta", Delta { full, upserts, removed });
+            }
+            let mut upserts = Vec::new();
+            for row in rows {
+                if sent.get(&row.record.id) != Some(&row) {
+                    sent.insert(row.record.id.clone(), row.clone());
+                    upserts.push(row);
                 }
             }
-            ticks += 1;
-            if active && ticks % 10 == 0 {
-                manager.save();
+            if full || !upserts.is_empty() || !removed.is_empty() {
+                let _ = app.emit("downloads-delta", Delta { full, upserts, removed });
             }
         }
     });
@@ -201,6 +214,15 @@ fn migrate_legacy_data(data_dir: &std::path::Path) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
+        // a second copy would load the same state file and overwrite the first one's progress:
+        // bring the running window forward instead
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -227,6 +249,18 @@ pub fn run() {
             let status = bridge::start(manager.clone(), &runtime, on_captured);
             app.manage(BridgeState(status));
             spawn_clipboard_watcher(app.handle().clone(), manager);
+
+            // the window starts hidden and the UI shows it with its rows drawn (no blank flash);
+            // should the UI never get there, show it anyway
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_secs(3));
+                if let Some(window) = handle.get_webview_window("main")
+                    && !window.is_visible().unwrap_or(true)
+                {
+                    let _ = window.show();
+                }
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -234,6 +268,7 @@ pub fn run() {
             add_download,
             add_downloads,
             sync_downloads,
+            refresh_download,
             get_download,
             pause_downloads,
             resume_downloads,
@@ -250,7 +285,8 @@ pub fn run() {
 
     app.run(|handle, event| {
         if let RunEvent::Exit = event {
-            handle.state::<Manager>().save();
+            // let connections write what they received; running downloads continue next start
+            handle.state::<Manager>().shutdown(Duration::from_millis(1500));
         }
     });
 }

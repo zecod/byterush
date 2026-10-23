@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
@@ -7,6 +8,7 @@ import {
   DashboardSpeed01Icon,
   Delete02Icon,
   FolderOpenIcon,
+  Link01Icon,
   LinkSquare02Icon,
   PauseCircleIcon,
   PauseIcon,
@@ -24,6 +26,7 @@ import { Icon } from "./components/icons";
 import { Logo } from "./components/Logo";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ConfirmDelete } from "./components/Modal";
+import { RefreshDialog } from "./components/RefreshDialog";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { type Filter, matches, Sidebar } from "./components/Sidebar";
 import "./App.css";
@@ -50,6 +53,7 @@ export default function App() {
   // rows live in a Map fed by delta events; `rev` triggers re-renders
   const store = useRef(new Map<string, Download>());
   const [rev, setRev] = useState(0);
+  const [loaded, setLoaded] = useState(false);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
@@ -59,6 +63,7 @@ export default function App() {
   const [addUrl, setAddUrl] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [confirmIds, setConfirmIds] = useState<string[] | null>(null);
+  const [refreshFor, setRefreshFor] = useState<Download | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; d: Download } | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [speedHistory, setSpeedHistory] = useState<number[]>(() => Array(HISTORY).fill(0));
@@ -80,6 +85,17 @@ export default function App() {
     setShowDetails(true);
   }, []);
   const fail = useCallback((e: unknown) => toast({ kind: "error", text: String(e) }, 7000), [toast]);
+
+  // the window starts hidden so it never flashes blank: show it once the first rows are drawn
+  const shown = useRef(false);
+  const reveal = useCallback(() => {
+    if (shown.current) return;
+    shown.current = true;
+    getCurrentWindow()
+      .show()
+      .then(() => getCurrentWindow().setFocus())
+      .catch(() => {});
+  }, []);
 
   // live data
   useEffect(() => {
@@ -115,12 +131,24 @@ export default function App() {
             clearTimeout(flushTimer);
             flushTimer = window.setTimeout(flushFinished, 800);
           }
-          if (d.status === "error") toast({ kind: "error", text: `${d.file_name}: ${d.error}` }, 8000);
+          if (d.status === "error")
+            toast(
+              {
+                kind: "error",
+                text: `${d.file_name}: ${d.error}`,
+                actions: d.resumable ? [{ label: "update link", run: () => setRefreshFor(d) }] : undefined,
+              },
+              10000,
+            );
         }
         map.set(d.id, d);
       }
       for (const id of removed) map.delete(id);
       setRev((r) => r + 1);
+      if (full) {
+        setLoaded(true);
+        requestAnimationFrame(() => requestAnimationFrame(reveal));
+      }
     };
     const unDelta = listen<Delta>("downloads-delta", (e) => apply(e.payload));
     const unClipboard = listen<string>("clipboard-url", (e) =>
@@ -133,13 +161,15 @@ export default function App() {
     });
     unDelta.then(() => api.sync()).catch(fail);
     api.getSettings().then(setSettings).catch(fail);
+    const revealAnyway = window.setTimeout(reveal, 1000);
     return () => {
       clearTimeout(flushTimer);
+      clearTimeout(revealAnyway);
       unDelta.then((f) => f());
       unClipboard.then((f) => f());
       unCaptured.then((f) => f());
     };
-  }, [toast, fail, focusDownload]);
+  }, [toast, fail, focusDownload, reveal]);
 
   const downloads = useMemo(() => [...store.current.values()], [rev]);
 
@@ -223,7 +253,7 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
       const typing = (e.target as HTMLElement).closest("input, textarea, select");
-      if (addUrl !== null || showSettings || confirmIds) return;
+      if (addUrl !== null || showSettings || confirmIds || refreshFor) return;
       const key = e.key.toLowerCase();
       if (mod && key === "n") {
         e.preventDefault();
@@ -327,6 +357,7 @@ export default function App() {
 
           <DownloadTable
             downloads={visible}
+            loaded={loaded}
             selected={selected}
             onSelect={onSelect}
             onActivate={activate}
@@ -369,6 +400,11 @@ export default function App() {
           <button onClick={() => api.reveal(menu.d.id).catch(fail)}>
             <Icon icon={FolderOpenIcon} size={15} /> show in folder
           </button>
+          {menu.d.status !== "completed" && !isWorking(menu.d.status) && menu.d.status !== "queued" && (
+            <button onClick={() => setRefreshFor(menu.d)}>
+              <Icon icon={Link01Icon} size={15} /> update link…
+            </button>
+          )}
           <button
             onClick={() => {
               navigator.clipboard.writeText(menu.d.url);
@@ -394,6 +430,13 @@ export default function App() {
         />
       )}
       {showSettings && settings && <SettingsDialog settings={settings} onSave={saveSettings} onClose={() => setShowSettings(false)} />}
+      {refreshFor && (
+        <RefreshDialog
+          download={refreshFor}
+          onClose={() => setRefreshFor(null)}
+          onDone={() => toast({ kind: "info", text: `link updated · ${refreshFor.file_name}` }, 3000)}
+        />
+      )}
       {confirmIds && (
         <ConfirmDelete
           count={confirmIds.length}
