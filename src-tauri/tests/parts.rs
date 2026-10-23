@@ -45,7 +45,7 @@ async fn parts_are_rebuilt_into_the_file() {
         }
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
-    manager.pause(&[id.clone()]);
+    manager.pause(std::slice::from_ref(&id));
     tokio::time::sleep(Duration::from_millis(400)).await;
     let paused = manager.get(&id).unwrap();
     assert_eq!(paused.record.layout, Layout::Parts);
@@ -58,7 +58,7 @@ async fn parts_are_rebuilt_into_the_file() {
 
     settings.speed_limit_kbps = 0;
     manager.update_settings(settings);
-    manager.resume(&[id.clone()]);
+    manager.resume(std::slice::from_ref(&id));
     let mut saw_rebuild = false;
     for _ in 0..1000 {
         let d = manager.get(&id).unwrap();

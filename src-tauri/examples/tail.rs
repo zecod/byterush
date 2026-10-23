@@ -15,7 +15,15 @@ async fn main() {
     let manager = Manager::new(out.join("byterush-state.json"), out.clone(), tokio::runtime::Handle::current());
     let started = Instant::now();
     let id = manager
-        .add(AddRequest { url, file_name: None, dir: Some(out.to_string_lossy().into()), connections, size: None, start: true, headers: Vec::new() })
+        .add(AddRequest {
+            url,
+            file_name: None,
+            dir: Some(out.to_string_lossy().into()),
+            connections,
+            size: None,
+            start: true,
+            headers: Vec::new(),
+        })
         .await
         .expect("add");
     let mut last_print = 0u64;
@@ -25,7 +33,7 @@ async fn main() {
         let d = manager.snapshot(true).into_iter().find(|d| d.record.id == id).unwrap();
         let pct = d.record.size.map(|s| d.downloaded as f64 * 100.0 / s.max(1) as f64).unwrap_or(0.0);
         let second = t as u64;
-        if second != last_print && (pct >= 95.0 || second % 10 == 0) {
+        if second != last_print && (pct >= 95.0 || second.is_multiple_of(10)) {
             last_print = second;
             println!("{t:6.1}s {:?} {pct:6.2}% {:7.2} MB/s conns {}", d.record.status, d.speed / 1_048_576.0, d.active_connections);
             if pct >= 95.0 {

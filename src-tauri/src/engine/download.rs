@@ -144,10 +144,7 @@ pub fn forwardable(name: &str) -> bool {
 
 /// GET with the download's browser headers applied.
 fn get(client: &reqwest::Client, url: &str, headers: &[(String, String)]) -> reqwest::RequestBuilder {
-    headers
-        .iter()
-        .filter(|(k, _)| forwardable(k))
-        .fold(client.get(url), |req, (k, v)| req.header(k.as_str(), v.as_str()))
+    headers.iter().filter(|(k, _)| forwardable(k)).fold(client.get(url), |req, (k, v)| req.header(k.as_str(), v.as_str()))
 }
 
 /// The first request of a download. Hotlink protection refuses requests that don't come from one
@@ -246,7 +243,9 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
     // compared with what the browser got, and the browser has let go of it by now.)
     let name = job.rec.lock().unwrap().file_name.clone();
     if !handed_over && serves_page_instead(&name, opened.content_type.as_deref()) {
-        bail!("the site answered with a web page instead of the file (a login, captcha or \"download will start\" page): start the download in the browser");
+        bail!(
+            "the site answered with a web page instead of the file (a login, captcha or \"download will start\" page): start the download in the browser"
+        );
     }
     let FirstResponse { size: probed_size, resumable, body: mut first, body_idx, continues, validators, referer, .. } = opened;
 
@@ -332,6 +331,10 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
     if cancel.is_cancelled() {
         return Ok(());
     }
+    // until the first checkpoint, what is known to be on disk is what the run started with
+    // (nothing for a fresh download, the saved progress for a resumed one)
+    let on_disk = job.rec.lock().unwrap().segments.clone();
+    job.rt.lock().unwrap().persisted = Some(on_disk);
     job.rec.lock().unwrap().status = Status::Downloading;
 
     let mut workers = JoinSet::new();
@@ -440,7 +443,12 @@ async fn checkpoints(job: Arc<Job>, sink: Arc<Sink>, saver: Arc<Saver>, stop: Ca
 /// A fresh download's first request doubles as the probe: it asks for the whole file as an open
 /// range and keeps streaming, saving a round trip per file. A resumed download goes straight for
 /// its first unfinished range, and that response tells whether the saved progress still applies.
-async fn open_first(client: &reqwest::Client, url: &str, headers: &[(String, String)], resume: Option<Resume>) -> anyhow::Result<FirstResponse> {
+async fn open_first(
+    client: &reqwest::Client,
+    url: &str,
+    headers: &[(String, String)],
+    resume: Option<Resume>,
+) -> anyhow::Result<FirstResponse> {
     if let Some(rs) = resume {
         let (resp, referer) = send_first(client, url, headers, &format!("bytes={}-{}", rs.start, rs.end - 1)).await?;
         let status = resp.status();
@@ -472,7 +480,16 @@ async fn open_first(client: &reqwest::Client, url: &str, headers: &[(String, Str
     let content_type = content_type(&resp);
     let validators = Validators::of(resp.headers());
     let body = (size != Some(0)).then_some(resp);
-    Ok(FirstResponse { size, resumable: resumable && size.is_some(), content_type, body, body_idx: 0, continues: false, validators, referer })
+    Ok(FirstResponse {
+        size,
+        resumable: resumable && size.is_some(),
+        content_type,
+        body,
+        body_idx: 0,
+        continues: false,
+        validators,
+        referer,
+    })
 }
 
 #[derive(Default)]
@@ -493,7 +510,8 @@ struct FirstResponse {
 /// Whether a response of `content_type` for a file called `name` is a web page instead of the file.
 fn serves_page_instead(name: &str, content_type: Option<&str>) -> bool {
     let html = content_type.is_some_and(|t| t.trim().to_ascii_lowercase().starts_with("text/html"));
-    let page_name = naming::extension(name).is_none_or(|e| matches!(e.as_str(), "htm" | "html" | "xhtml" | "shtml" | "mht" | "mhtml" | "php" | "asp" | "aspx" | "jsp"));
+    let page_name = naming::extension(name)
+        .is_none_or(|e| matches!(e.as_str(), "htm" | "html" | "xhtml" | "shtml" | "mht" | "mhtml" | "php" | "asp" | "aspx" | "jsp"));
     html && !page_name
 }
 
@@ -507,9 +525,7 @@ fn mismatch(first: &FirstResponse, expect: &Expectation) -> Option<String> {
         return Some("the site answered with a web page (bot check or login) instead of the file".into());
     }
     match (expect.size, first.size) {
-        (Some(want), Some(got)) if want > 0 && want != got => {
-            Some(format!("the site sent {got} bytes but the browser was getting {want}"))
-        }
+        (Some(want), Some(got)) if want > 0 && want != got => Some(format!("the site sent {got} bytes but the browser was getting {want}")),
         _ => None,
     }
 }

@@ -17,6 +17,11 @@ async fn main() {
     let app = axum::Router::new().fallback_service(tower_http::services::ServeDir::new(src.path()));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
+    // no Nagle on the test server: otherwise every small file waits ~40 ms for a delayed ACK,
+    // which measures the loopback stack instead of the engine
+    let listener = axum::serve::ListenerExt::tap_io(listener, |tcp| {
+        let _ = tcp.set_nodelay(true);
+    });
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
     let manager = Manager::new(out.path().join("state.json"), out.path().to_path_buf(), tokio::runtime::Handle::current());
@@ -26,7 +31,12 @@ async fn main() {
 
     let started = Instant::now();
     let requests = (0..files)
-        .map(|i| AddRequest { url: format!("http://{addr}/f{i:04}.bin"), dir: Some(out.path().to_string_lossy().into()), start: true, ..Default::default() })
+        .map(|i| AddRequest {
+            url: format!("http://{addr}/f{i:04}.bin"),
+            dir: Some(out.path().to_string_lossy().into()),
+            start: true,
+            ..Default::default()
+        })
         .collect();
     let (ids, errors) = manager.add_many(requests).await;
     assert!(errors.is_empty(), "{errors:?}");
