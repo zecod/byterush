@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">Velto app icon</title>
+  <rect width="1024" height="1024" rx="225" fill="hsl(0 9% 7%)"/>
+  <g fill="hsl(0 15% 94%)">
+    <rect x="256" y="128" width="128" height="288"/>
+    <rect x="256" y="480" width="128" height="192"/>
+    <rect x="448" y="128" width="128" height="288"/>
+    <rect x="448" y="480" width="128" height="192"/>
+    <rect x="640" y="128" width="128" height="288"/>
+    <rect x="640" y="480" width="128" height="192"/>
+    <path d="M128 544H320L512 736 704 544H896L512 928Z"/>
+  </g>
+  <rect x="448" y="128" width="128" height="128" fill="hsl(62 92% 76%)"/>
+</svg>
