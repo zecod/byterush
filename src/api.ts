@@ -117,6 +117,12 @@ export function formatBytes(n: number | null | undefined): string {
   return `${v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2)} ${units[i]}`;
 }
 
+/** A percentage of 0..100, rounded down so a part that is not finished never reads 100%. */
+export function formatPercent(pct: number, digits = 0): string {
+  const k = 10 ** digits;
+  return `${(Math.floor(pct * k) / k).toFixed(digits)}%`;
+}
+
 export const formatSpeed = (bps: number) => (bps > 0 ? `${formatBytes(Math.round(bps))}/s` : "");
 
 export function formatEta(seconds: number | null): string {
