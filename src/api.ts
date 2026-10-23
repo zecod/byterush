@@ -44,7 +44,9 @@ export interface Settings {
   browser_integration: boolean;
   retries: number;
   theme: "system" | "dark" | "light";
+  /** Empty = the built-in browser user-agent. */
   user_agent: string;
+  resume_on_startup: boolean;
 }
 
 export interface ProbeInfo {
@@ -85,6 +87,7 @@ export const api = {
   add: (request: AddRequest) => invoke<string>("add_download", { request }),
   addMany: (requests: AddRequest[]) => invoke<{ ids: string[]; errors: string[] }>("add_downloads", { requests }),
   sync: () => invoke<void>("sync_downloads"),
+  refresh: (id: string, url: string) => invoke<void>("refresh_download", { id, url }),
   get: (id: string) => invoke<Download | null>("get_download", { id }),
   pause: (ids: string[]) => invoke<void>("pause_downloads", { ids }),
   resume: (ids: string[]) => invoke<void>("resume_downloads", { ids }),
