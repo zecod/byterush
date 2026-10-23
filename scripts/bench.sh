@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One connection (curl, the way a browser downloads) against Byterush with 1, 8 and 16 connections.
+# One connection (curl, the way a browser downloads) against Byterush with 8, 16 and 32 connections.
 # usage: scripts/bench.sh <url> [runs]
 # Builds the engine's headless `get` example, prints the wall-clock time of every download.
 set -euo pipefail
@@ -13,7 +13,7 @@ work=$(mktemp -d)
 trap 'rm -rf "${work:?}"' EXIT
 
 for run in $(seq 1 "$runs"); do
-  for mode in curl 1 8 16; do
+  for mode in curl 8 16 32; do
     rm -rf "${work:?}"/*
     start=$(date +%s.%N)
     if [ "$mode" = curl ]; then
