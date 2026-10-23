@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Alert02Icon, CloudDownloadIcon } from "@hugeicons/core-free-icons";
 import type { Download } from "../api";
-import { finishingLabel, formatBytes, formatDate, formatEta, formatSpeed, progress, shortcut, statusLabel } from "../api";
+import { finishingLabel, formatBytes, formatDate, formatEta, formatPercent, formatSpeed, progress, shortcut, statusLabel } from "../api";
 import { CategoryBadge, Icon } from "./icons";
 
 interface Props {
@@ -66,7 +66,7 @@ function Row({ d, selected, ...handlers }: { d: Download; selected: boolean } & 
         <ProgressBar d={d} />
         <div className="progress-meta">
           <span className={`status-text status-${d.status}`}>{finishingLabel(d) ?? statusLabel[d.status]}</span>
-          <span>{p != null && d.status !== "completed" ? `${(p * 100).toFixed(1)}%` : ""}</span>
+          <span>{p != null && d.status !== "completed" ? formatPercent(p * 100, 1) : ""}</span>
         </div>
       </div>
       <div className="cell num strong">{formatSpeed(d.speed)}</div>
