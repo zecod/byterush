@@ -240,18 +240,19 @@ async fn download(State(bridge): State<Bridge>, headers: HeaderMap, Json(req): J
         },
     };
     let outcome = match tokio::time::timeout(VERDICT_TIMEOUT, verdict).await {
-        Ok(Ok(Ok(()))) => Ok(()),
+        Ok(Ok(Ok(size))) => Ok(size),
         Ok(Ok(Err(reason))) => Err(reason),
         Ok(Err(_)) => Err("the download stopped before it started".into()),
         Err(_) => Err("the server took too long to answer".into()),
     };
-    // its size is known now when the browser didn't know it: a small one goes back to the browser
+    // the server's answer tells the size when the browser didn't know it: a small one goes back to
+    // the browser. The verdict carries the size; the record only learns it a moment later.
     let outcome = match outcome {
-        Ok(()) if min > 0 && previous.is_none() && bridge.manager.get(&id).and_then(|d| d.record.size).is_some_and(|s| s < min) => {
+        Ok(size) if min > 0 && previous.is_none() && size.is_some_and(|s| s < min) => {
             bridge.manager.remove(std::slice::from_ref(&id), true);
             return with_cors(origin, reject(left_small(min)));
         }
-        other => other,
+        other => other.map(|_| ()),
     };
     match outcome {
         Ok(()) => {
