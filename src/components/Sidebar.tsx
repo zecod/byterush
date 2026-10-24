@@ -1,5 +1,5 @@
 import type { Category, Download } from "../api";
-import { formatSpeed, isActive, isWorking } from "../api";
+import { formatSpeed, isActive, isPending, isWorking } from "../api";
 import { categoryLabel } from "./icons";
 
 export type Filter = "all" | "active" | "unfinished" | "completed" | `cat:${Category}`;
@@ -9,7 +9,7 @@ export function matches(d: Download, f: Filter): boolean {
     case "all":
       return true;
     case "active":
-      return isWorking(d.status) || d.status === "queued";
+      return isWorking(d.status) || isPending(d.status);
     case "unfinished":
       return d.status !== "completed";
     case "completed":
@@ -63,7 +63,7 @@ export function Sidebar({ downloads, filter, onFilter, speedHistory, speedLimitK
   const counts = new Map<Filter, number>();
   for (const d of downloads) {
     counts.set("all", (counts.get("all") ?? 0) + 1);
-    if (isWorking(d.status) || d.status === "queued") counts.set("active", (counts.get("active") ?? 0) + 1);
+    if (isWorking(d.status) || isPending(d.status)) counts.set("active", (counts.get("active") ?? 0) + 1);
     if (d.status === "completed") counts.set("completed", (counts.get("completed") ?? 0) + 1);
     else counts.set("unfinished", (counts.get("unfinished") ?? 0) + 1);
     const c: Filter = `cat:${d.category}`;

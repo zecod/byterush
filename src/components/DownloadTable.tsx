@@ -2,11 +2,13 @@ import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Alert02Icon, CloudDownloadIcon } from "@hugeicons/core-free-icons";
 import type { Download } from "../api";
-import { finishingLabel, formatBytes, formatDate, formatEta, formatSpeed, progress, shortcut, statusLabel } from "../api";
+import { finishingLabel, formatBytes, formatDate, formatEta, formatPercent, formatSpeed, progress, shortcut, statusLabel } from "../api";
 import { CategoryBadge, Icon } from "./icons";
 
 interface Props {
   downloads: Download[];
+  /** The first rows arrived; until then an empty list means "not loaded yet", not "no downloads". */
+  loaded: boolean;
   selected: Set<string>;
   onSelect: (id: string, e: React.MouseEvent) => void;
   onActivate: (d: Download) => void;
@@ -33,7 +35,7 @@ export function ProgressBar({ d }: { d: Download }) {
   );
 }
 
-function Row({ d, selected, ...handlers }: { d: Download; selected: boolean } & Omit<Props, "downloads" | "selected" | "onAdd">) {
+function Row({ d, selected, ...handlers }: { d: Download; selected: boolean } & Omit<Props, "downloads" | "selected" | "onAdd" | "loaded">) {
   const p = progress(d);
   return (
     <div
@@ -64,7 +66,7 @@ function Row({ d, selected, ...handlers }: { d: Download; selected: boolean } & 
         <ProgressBar d={d} />
         <div className="progress-meta">
           <span className={`status-text status-${d.status}`}>{finishingLabel(d) ?? statusLabel[d.status]}</span>
-          <span>{p != null && d.status !== "completed" ? `${(p * 100).toFixed(1)}%` : ""}</span>
+          <span>{p != null && d.status !== "completed" ? formatPercent(p * 100, 1) : ""}</span>
         </div>
       </div>
       <div className="cell num strong">{formatSpeed(d.speed)}</div>
@@ -75,7 +77,7 @@ function Row({ d, selected, ...handlers }: { d: Download; selected: boolean } & 
 }
 
 /** Virtualized list: only rows in view are rendered, so thousands of downloads stay smooth. */
-export function DownloadTable({ downloads, selected, onAdd, ...handlers }: Props) {
+export function DownloadTable({ downloads, selected, onAdd, loaded, ...handlers }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: downloads.length,
@@ -86,6 +88,7 @@ export function DownloadTable({ downloads, selected, onAdd, ...handlers }: Props
   });
 
   if (downloads.length === 0) {
+    if (!loaded) return <div className="table" />;
     return (
       <div className="empty">
         <div className="empty-icon">

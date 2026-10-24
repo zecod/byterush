@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 pub enum Status {
     Queued,
     Connecting,
+    /// Handed over by the browser and on hold, its first response open, until the user answers
+    /// the "New download" window (`Manager::confirm`).
+    Waiting,
     Downloading,
     /// All bytes are in; the file is being flushed, rebuilt from its parts or moved into place.
     Finishing,
@@ -90,7 +93,13 @@ pub struct Settings {
     pub browser_integration: bool,
     pub retries: u8,
     pub theme: String,
+    /// Empty = the built-in one (see `app_user_agent`).
     pub user_agent: String,
+    /// Continue the downloads that were running when the app closed (or crashed).
+    pub resume_on_startup: bool,
+    /// Ask where to save a download the browser hands over, in the "New download" window, before
+    /// it goes on.
+    pub ask_before_download: bool,
 }
 
 impl Default for Settings {
@@ -106,9 +115,27 @@ impl Default for Settings {
             browser_integration: true,
             retries: 5,
             theme: "system".into(),
-            user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Byterush/0.2".into(),
+            user_agent: String::new(),
+            resume_on_startup: true,
+            ask_before_download: true,
         }
     }
+}
+
+impl Settings {
+    /// The user-agent requests go out with when the browser didn't hand one over.
+    pub fn effective_user_agent(&self) -> String {
+        let custom = self.user_agent.trim();
+        if custom.is_empty() { app_user_agent().to_string() } else { custom.to_string() }
+    }
+}
+
+/// The app's own, honest user-agent. Measured against common download hosts it is the one that
+/// works best: a browser-like value made SourceForge and VideoLAN answer with their "your download
+/// will start" page instead of the file, and a Chrome one with a non-Chrome TLS handshake was cut
+/// off as an impostor (Hetzner). Downloads taken over from the browser replay its own headers.
+pub fn app_user_agent() -> &'static str {
+    concat!("Byterush/", env!("CARGO_PKG_VERSION"), " (+https://github.com/zecod/byterush)")
 }
 
 /// Persisted state of one download.
@@ -136,6 +163,12 @@ pub struct Record {
     pub headers: Vec<(String, String)>,
     #[serde(default)]
     pub layout: Layout,
+    /// What identifies this version of the file on the server (ETag and Last-Modified), so a resume
+    /// never stitches together bytes of two different versions.
+    #[serde(default)]
+    pub etag: Option<String>,
+    #[serde(default)]
+    pub last_modified: Option<String>,
 }
 
 impl Record {
@@ -143,7 +176,17 @@ impl Record {
         self.segments.iter().map(|s| s.downloaded).sum()
     }
 
+    /// What the UI gets: no segments, and the session headers never leave the engine.
     pub fn clone_without_segments(&self) -> Self {
+        self.copy(Vec::new(), Vec::new())
+    }
+
+    /// A full copy (session headers included) carrying the given segments.
+    pub fn with_segments(&self, segments: Vec<Segment>) -> Self {
+        self.copy(segments, self.headers.clone())
+    }
+
+    fn copy(&self, segments: Vec<Segment>, headers: Vec<(String, String)>) -> Self {
         Self {
             id: self.id.clone(),
             url: self.url.clone(),
@@ -153,15 +196,16 @@ impl Record {
             size: self.size,
             resumable: self.resumable,
             connections: self.connections,
-            segments: Vec::new(),
+            segments,
             status: self.status,
             error: self.error.clone(),
             added_at: self.added_at,
             completed_at: self.completed_at,
             part_path: self.part_path.clone(),
-            // never sent to the UI
-            headers: Vec::new(),
+            headers,
             layout: self.layout,
+            etag: self.etag.clone(),
+            last_modified: self.last_modified.clone(),
         }
     }
 }
@@ -190,6 +234,10 @@ pub struct ProbeInfo {
     pub content_type: Option<String>,
     pub category: Category,
     pub dir: String,
+    #[serde(skip)]
+    pub etag: Option<String>,
+    #[serde(skip)]
+    pub last_modified: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -205,6 +253,26 @@ pub struct AddRequest {
     /// Browser request headers to replay (see `Record::headers`).
     #[serde(default)]
     pub headers: Vec<(String, String)>,
+    /// Hold the download after its first response until `Manager::confirm` (`Status::Waiting`).
+    #[serde(default)]
+    pub confirm: bool,
+}
+
+/// The user's answer in the "New download" window. Empty fields keep what the download has.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct Confirmation {
+    pub file_name: Option<String>,
+    pub dir: Option<String>,
+    pub connections: Option<u8>,
+    /// Start now; otherwise it stays paused for later.
+    pub start: bool,
+}
+
+/// Room on the drive a folder is on.
+#[derive(Clone, Debug, Serialize)]
+pub struct DiskSpace {
+    pub free: u64,
+    pub total: u64,
 }
 
 /// What the browser saw for a download it handed over; the first response must match it.
@@ -219,8 +287,5 @@ fn yes() -> bool {
 }
 
 pub fn now_ms() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }

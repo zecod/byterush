@@ -27,14 +27,24 @@ async fn main() {
         worst = worst.max(took);
         let d = view.iter().find(|d| d.record.id == id).unwrap();
         if took > Duration::from_millis(100) {
-            println!("{:>5.1}s  status call blocked {:>6} ms  ({:.1}% done)", started.elapsed().as_secs_f64(), took.as_millis(), d.downloaded as f64 * 100.0 / d.record.size.unwrap_or(1) as f64);
+            println!(
+                "{:>5.1}s  status call blocked {:>6} ms  ({:.1}% done)",
+                started.elapsed().as_secs_f64(),
+                took.as_millis(),
+                d.downloaded as f64 * 100.0 / d.record.size.unwrap_or(1) as f64
+            );
         }
         if d.record.status == Status::Completed {
             break;
         }
     }
     let d = manager.snapshot(false).into_iter().find(|d| d.record.id == id).unwrap();
-    println!("worst status call: {} ms; after 20 s: {:.1}% at {:.0} MB/s", worst.as_millis(), d.downloaded as f64 * 100.0 / d.record.size.unwrap_or(1) as f64, d.speed / 1e6);
+    println!(
+        "worst status call: {} ms; after 20 s: {:.1}% at {:.0} MB/s",
+        worst.as_millis(),
+        d.downloaded as f64 * 100.0 / d.record.size.unwrap_or(1) as f64,
+        d.speed / 1e6
+    );
     manager.remove(&[id], true);
     tokio::time::sleep(Duration::from_secs(2)).await;
 }

@@ -1,0 +1,44 @@
+name: Feature request
+description: Suggest an idea or an improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for the suggestion. Please search the [existing issues](https://github.com/zecod/byterush/issues?q=is%3Aissue) first; a thumbs-up on an existing request helps us prioritize.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what gets in the way today?
+      placeholder: When I download from …, I have to …
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like Byterush (the app or the browser extension) to do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Workarounds you use now, or how other download managers handle it.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Downloads and the engine
+        - App interface
+        - Browser extension
+        - Installers and platforms
+        - Website and documentation
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I'd like to work on this myself.

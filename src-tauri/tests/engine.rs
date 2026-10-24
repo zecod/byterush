@@ -50,20 +50,21 @@ async fn segmented_download_pause_resume() {
             size: None,
             start: true,
             headers: Vec::new(),
+            confirm: false,
         })
         .await
         .unwrap();
 
     wait_for(&manager, &id, Status::Downloading).await;
     tokio::time::sleep(Duration::from_millis(700)).await;
-    manager.pause(&[id.clone()]);
+    manager.pause(std::slice::from_ref(&id));
     let paused = wait_for(&manager, &id, Status::Paused).await;
     assert!(paused.downloaded > 0 && paused.downloaded < data.len() as u64, "paused at {}", paused.downloaded);
     assert!(paused.segment_count >= 6);
 
     settings.speed_limit_kbps = 0;
     manager.update_settings(settings);
-    manager.resume(&[id.clone()]);
+    manager.resume(std::slice::from_ref(&id));
     let done = wait_for(&manager, &id, Status::Completed).await;
     assert_eq!(done.downloaded, data.len() as u64);
 
@@ -87,6 +88,7 @@ async fn duplicate_names_get_numbered() {
         size: None,
         start: true,
         headers: Vec::new(),
+        confirm: false,
     };
     let a = manager.add(req()).await.unwrap();
     let b = manager.add(req()).await.unwrap();
@@ -147,7 +149,12 @@ async fn quick_pause_resume_under_speed_cap() {
     manager.update_settings(settings.clone());
 
     let id = manager
-        .add(AddRequest { url: format!("{base}/capped.bin"), dir: Some(out.path().to_string_lossy().into_owned()), start: true, ..Default::default() })
+        .add(AddRequest {
+            url: format!("{base}/capped.bin"),
+            dir: Some(out.path().to_string_lossy().into_owned()),
+            start: true,
+            ..Default::default()
+        })
         .await
         .unwrap();
     wait_for(&manager, &id, Status::Downloading).await;
@@ -155,10 +162,10 @@ async fn quick_pause_resume_under_speed_cap() {
 
     // pause shows immediately, even while connections sleep inside the limiter
     let started = std::time::Instant::now();
-    manager.pause(&[id.clone()]);
+    manager.pause(std::slice::from_ref(&id));
     assert_eq!(manager.get(&id).unwrap().record.status, Status::Paused);
     // resuming right away must not be lost while the old connections close
-    manager.resume(&[id.clone()]);
+    manager.resume(std::slice::from_ref(&id));
     settings.speed_limit_kbps = 0;
     manager.update_settings(settings);
     let done = wait_for(&manager, &id, Status::Completed).await;
@@ -178,7 +185,11 @@ async fn unreadable_state_is_kept_aside() {
     // garbage is backed up, not overwritten
     std::fs::write(&store, b"{ not json").unwrap();
     let _m = Manager::new(store.clone(), dir.path().to_path_buf(), tokio::runtime::Handle::current());
-    let backups: Vec<_> = std::fs::read_dir(dir.path()).unwrap().filter_map(|e| e.ok()).filter(|e| e.file_name().to_string_lossy().contains("corrupt")).collect();
+    let backups: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_name().to_string_lossy().contains("corrupt"))
+        .collect();
     assert_eq!(backups.len(), 1);
     assert_eq!(std::fs::read(backups[0].path()).unwrap(), b"{ not json");
 }
