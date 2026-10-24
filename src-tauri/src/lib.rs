@@ -1,4 +1,5 @@
 pub mod bridge;
+pub mod browsers;
 pub mod engine;
 
 use engine::{AddRequest, Confirmation, DiskSpace, DownloadView, Manager, ProbeInfo, Settings};
@@ -38,6 +39,13 @@ struct Captured {
     waiting: bool,
 }
 
+/// A download the browser kept because the app couldn't take it.
+#[derive(Serialize, Clone)]
+struct Declined {
+    name: String,
+    reason: String,
+}
+
 /// Label of the "New download" window.
 const ASK_WINDOW: &str = "confirm";
 
@@ -56,18 +64,63 @@ fn bridge_status(state: State<'_, BridgeState>) -> bridge::BridgeStatus {
     state.0.lock().unwrap().clone()
 }
 
-/// The unpacked extension shipped with the app (repo folder in development).
+/// The unpacked extension shipped with the app (repo folder in development). An AppImage's files
+/// sit in a mount that moves on every start and is gone once the app quits, and the browser would
+/// lose an extension loaded from there: an AppImage copies it to its data folder instead, refreshed
+/// on every call so an updated app brings its extension along.
 fn extension_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
     let bundled = app.path().resource_dir().ok().map(|d| d.join("extension"));
     let dev = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../extension");
-    [bundled, Some(dev)].into_iter().flatten().find(|d| d.join("manifest.json").exists())
+    let found = [bundled, Some(dev)].into_iter().flatten().find(|d| d.join("manifest.json").exists())?;
+    if std::env::var_os("APPIMAGE").is_none() {
+        return Some(found);
+    }
+    let stable = app.path().app_data_dir().ok()?.join("extension");
+    Some(if copy_dir(&found, &stable).is_ok() { stable } else { found })
+}
+
+fn copy_dir(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let target = to.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir(&entry.path(), &target)?;
+        } else {
+            std::fs::copy(entry.path(), target)?;
+        }
+    }
+    Ok(())
+}
+
+/// The extension folder as people know it: Windows' canonical form starts with `\\?\`.
+fn shown_extension_dir(app: &AppHandle) -> Option<String> {
+    let dir = extension_dir(app)?;
+    let dir = dir.canonicalize().unwrap_or(dir);
+    let text = dir.to_string_lossy();
+    Some(text.strip_prefix(r"\\?\").unwrap_or(&text).to_string())
+}
+
+/// Where the extension's folder is, for the setup guide to show and copy.
+#[tauri::command(async)]
+fn extension_folder(app: AppHandle) -> Option<String> {
+    shown_extension_dir(&app)
+}
+
+/// The browsers the extension can be installed in, found on this computer.
+#[tauri::command(async)]
+fn installed_browsers() -> Vec<browsers::Browser> {
+    browsers::installed()
+}
+
+#[tauri::command(async)]
+fn open_extensions_page(id: String) -> Result<(), String> {
+    browsers::open_extensions_page(&id)
 }
 
 #[tauri::command(async)]
 fn open_extension_folder(app: AppHandle) -> Result<String, String> {
-    let dir = extension_dir(&app).ok_or("extension folder not found")?;
-    let dir = dir.canonicalize().unwrap_or(dir);
-    let shown = dir.to_string_lossy().trim_start_matches(r"\?\").to_string();
+    let shown = shown_extension_dir(&app).ok_or("extension folder not found")?;
     app.opener().open_path(&shown, None::<&str>).map_err(|e| e.to_string())?;
     Ok(shown)
 }
@@ -432,7 +485,13 @@ pub fn run() {
                 });
             });
             let runtime = tauri::async_runtime::block_on(async { tokio::runtime::Handle::current() });
-            let status = bridge::start(manager.clone(), &runtime, bridge::Hooks { on_captured, can_ask: true });
+            // and the ones the browser had to keep, so they don't go by unnoticed
+            let handle = app.handle().clone();
+            let on_declined: bridge::OnDeclined = Arc::new(move |name: &str, reason: &str| {
+                let _ = handle.emit("browser-kept", Declined { name: name.into(), reason: reason.into() });
+            });
+            let hooks = bridge::Hooks { on_captured, on_declined, can_ask: true };
+            let status = bridge::start(manager.clone(), &runtime, hooks);
             app.manage(BridgeState(status));
             spawn_clipboard_watcher(app.handle().clone(), manager);
 
@@ -479,6 +538,9 @@ pub fn run() {
             reveal_download,
             bridge_status,
             open_extension_folder,
+            extension_folder,
+            installed_browsers,
+            open_extensions_page,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

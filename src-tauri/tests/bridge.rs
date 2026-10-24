@@ -44,6 +44,9 @@ struct Env {
     captured: Arc<Mutex<Vec<(String, String, bool)>>>,
     /// Requests for `/once.bin`.
     once_hits: Arc<AtomicUsize>,
+    /// (file name, reason) of every download the browser had to keep.
+    declined: Arc<Mutex<Vec<(String, String)>>>,
+    status: Arc<Mutex<bridge::BridgeStatus>>,
 }
 
 async fn setup() -> Env {
@@ -78,14 +81,18 @@ async fn setup_with(can_ask: bool) -> Env {
     let captured = Arc::new(Mutex::new(Vec::new()));
     let log = captured.clone();
     let on_captured = Arc::new(move |id: &str, source: &str, waiting: bool| log.lock().unwrap().push((id.into(), source.into(), waiting)));
-    let status = bridge::start_on(manager.clone(), &tokio::runtime::Handle::current(), bridge::Hooks { on_captured, can_ask }, port);
+    let declined = Arc::new(Mutex::new(Vec::new()));
+    let kept = declined.clone();
+    let on_declined = Arc::new(move |name: &str, reason: &str| kept.lock().unwrap().push((name.to_string(), reason.to_string())));
+    let status =
+        bridge::start_on(manager.clone(), &tokio::runtime::Handle::current(), bridge::Hooks { on_captured, on_declined, can_ask }, port);
     for _ in 0..100 {
         if status.lock().unwrap().listening {
             break;
         }
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-    Env { _out: out, out_path, manager, site, bridge: format!("http://127.0.0.1:{port}/v1"), captured, once_hits }
+    Env { _out: out, out_path, manager, site, bridge: format!("http://127.0.0.1:{port}/v1"), captured, once_hits, declined, status }
 }
 
 async fn hand_over(env: &Env, origin: &str, body: Value) -> (StatusCode, Value) {
@@ -156,6 +163,11 @@ async fn without_session_the_browser_keeps_it() {
     assert!(verdict["reason"].as_str().unwrap().contains("403"), "{verdict}");
     tokio::time::sleep(Duration::from_millis(300)).await;
     assert!(env.manager.snapshot(false).is_empty(), "rejected attempt must be removed");
+    // and the app hears about it
+    let declined = env.declined.lock().unwrap().clone();
+    assert_eq!(declined.len(), 1);
+    assert_eq!(declined[0].0, "protected.bin");
+    assert!(declined[0].1.contains("403"), "{declined:?}");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -281,6 +293,11 @@ async fn wait_status(m: &Manager, id: &str, status: Status) -> byterush_lib::eng
     panic!("timed out waiting for {status:?}");
 }
 
+async fn get_ping(env: &Env) -> Value {
+    let resp = reqwest::Client::new().get(format!("{}/ping", env.bridge)).header("x-byterush-ext", EXT_ID).send().await.unwrap();
+    serde_json::from_str(&resp.text().await.unwrap()).unwrap()
+}
+
 fn once_body(env: &Env) -> Value {
     json!({ "url": format!("{}/once.bin", env.site), "file_name": "once.bin", "mime": "application/octet-stream", "size": FILE.len(), "headers": [], "source": "capture" })
 }
@@ -389,4 +406,107 @@ async fn with_asking_turned_off_it_goes_on_right_away() {
     wait_status(&env.manager, &id, Status::Completed).await;
     assert!(!env.captured.lock().unwrap()[0].2);
     assert_eq!(std::fs::read(env.out_path.join("once.bin")).unwrap(), FILE);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_busy_server_is_asked_again_instead_of_leaving_it_to_the_browser() {
+    // "too many requests" (come back in a second), then a gateway hiccup, then the file
+    let hits = Arc::new(AtomicUsize::new(0));
+    let counter = hits.clone();
+    let app = axum::Router::new().route(
+        "/busy.bin",
+        get(move || {
+            let n = counter.fetch_add(1, Ordering::SeqCst);
+            async move {
+                match n {
+                    0 => (StatusCode::TOO_MANY_REQUESTS, [(header::RETRY_AFTER, "1")], "slow down").into_response(),
+                    1 => (StatusCode::SERVICE_UNAVAILABLE, "busy").into_response(),
+                    _ => ([(header::CONTENT_TYPE, "application/octet-stream")], FILE).into_response(),
+                }
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let site = format!("http://{}", listener.local_addr().unwrap());
+    tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let env = setup().await;
+
+    let started = std::time::Instant::now();
+    let (_, verdict) = hand_over(
+        &env,
+        EXT_ORIGIN,
+        json!({ "url": format!("{site}/busy.bin"), "file_name": "busy.bin", "size": FILE.len(), "headers": [], "source": "capture" }),
+    )
+    .await;
+    assert_eq!(verdict["accepted"], true, "{verdict}");
+    assert!(started.elapsed() >= Duration::from_secs(1), "Retry-After is honoured");
+    assert!(started.elapsed() < Duration::from_secs(8));
+    let id = verdict["id"].as_str().unwrap().to_string();
+    wait_status(&env.manager, &id, Status::Completed).await;
+    assert_eq!(std::fs::read(env.out_path.join("busy.bin")).unwrap(), FILE);
+    assert!(hits.load(Ordering::SeqCst) >= 3);
+    assert!(env.declined.lock().unwrap().is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn small_files_are_left_to_the_browser_when_set() {
+    let env = setup().await;
+    let body = |source: &str, size: Option<usize>| json!({ "url": format!("{}/once.bin", env.site), "file_name": "once.bin", "size": size, "headers": [], "source": source });
+    // off by default: everything is taken
+    let ping = get_ping(&env).await;
+    assert_eq!(ping["min_size"], 0);
+
+    let mut settings = env.manager.settings();
+    settings.leave_small_to_browser = true;
+    settings.small_file_limit_mb = 1;
+    env.manager.update_settings(settings);
+    let ping = get_ping(&env).await;
+    assert_eq!(ping["min_size"], 1024 * 1024);
+
+    // the browser knows the size: no request at all
+    let (_, verdict) = hand_over(&env, EXT_ORIGIN, body("capture", Some(FILE.len()))).await;
+    assert_eq!(verdict["accepted"], false);
+    assert!(verdict["reason"].as_str().unwrap().contains("smaller than 1 MB"), "{verdict}");
+    assert_eq!(env.once_hits.load(Ordering::SeqCst), 0);
+
+    // it doesn't: the first response tells, and the attempt is dropped
+    let (_, verdict) = hand_over(&env, EXT_ORIGIN, body("capture", None)).await;
+    assert_eq!(verdict["accepted"], false, "{verdict}");
+    assert!(verdict["reason"].as_str().unwrap().contains("smaller than 1 MB"), "{verdict}");
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert!(env.manager.snapshot(false).is_empty());
+    assert!(files_in(&env.out_path).is_empty(), "{:?}", files_in(&env.out_path));
+    // the user's own rule, not a failure to report
+    assert!(env.declined.lock().unwrap().is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_link_picked_from_the_menu_is_taken_whatever_its_size() {
+    let env = setup().await;
+    let mut settings = env.manager.settings();
+    settings.leave_small_to_browser = true;
+    settings.small_file_limit_mb = 1;
+    env.manager.update_settings(settings);
+    let (_, verdict) =
+        hand_over(&env, EXT_ORIGIN, json!({ "url": format!("{}/once.bin", env.site), "size": FILE.len(), "source": "menu" })).await;
+    assert_eq!(verdict["accepted"], true, "{verdict}");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_extension_checking_in_is_remembered() {
+    let env = setup().await;
+    assert!(env.status.lock().unwrap().extension_seen_ms.is_none());
+    let resp = reqwest::Client::new()
+        .get(format!("{}/ping", env.bridge))
+        .header("x-byterush-ext", EXT_ID)
+        .header("x-byterush-browser", "Microsoft Edge")
+        .header("x-byterush-ext-version", "0.3.0")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status().as_u16(), 200);
+    let status = env.status.lock().unwrap().clone();
+    assert!(status.extension_seen_ms.is_some());
+    assert_eq!(status.extension_browser.as_deref(), Some("Microsoft Edge"));
+    assert_eq!(status.extension_version.as_deref(), Some("0.3.0"));
 }
