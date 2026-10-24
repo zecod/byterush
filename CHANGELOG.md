@@ -26,6 +26,16 @@ entries for people who use Byterush, not for people who read the diff.
   checking that it is the same file.
 - Single instance: launching Byterush again brings the open window forward instead of starting a
   second copy that would overwrite the first one's state.
+- Extension setup guide in the app (*Settings → browser → set up the extension…*): it finds the
+  Chromium browsers installed (Chrome, Edge, Brave, Vivaldi, Opera, Chromium) and opens their
+  extensions page, shows the extension's folder with a copy button, and turns green once the
+  extension checks in. Until it does, the main window suggests setting it up.
+- A setup page on the website that checks live whether the extension is loaded and reaches the
+  app, with the steps for each browser and the reasons a download can stay in the browser.
+- *Leave downloads smaller than … to the browser* (off by default, 1 GB when turned on, any size
+  in MB or GB). Links picked with *Download with Byterush* are always taken.
+- The app tells you when a browser download stayed in the browser and why (the server refused it,
+  a different file came back).
 
 ### Changed
 
@@ -57,6 +67,11 @@ entries for people who use Byterush, not for people who read the diff.
 - Extension: the first download right after the app starts is caught. A stale "app not running"
   result is no longer remembered.
 - Extension: compressed (gzip) transfers are taken over.
+- Fewer downloads left to the browser: a busy server (429, 502, 503, 504) or a dropped first
+  connection is asked again twice before the browser keeps the download, and the extension asks a
+  slow-to-answer app twice.
+- AppImage: the extension is loaded from the app's data folder, which stays put, instead of the
+  AppImage's mount, which moves on every start.
 - Extension: downloads whose name Chrome settled without asking extensions (another extension or a
   policy picked it) are named from the server's `Content-Disposition`, instead of the app probing
   the link again, which could use up a one-time link.

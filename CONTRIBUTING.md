@@ -76,7 +76,7 @@ npx tsc --noEmit
 npx vite build
 
 # extension and landing page
-for f in extension/*.js landing/main.js; do node --check "$f"; done
+for f in extension/*.js landing/*.js; do node --check "$f"; done
 
 # videos (from video/, after npm ci)
 npm run lint
