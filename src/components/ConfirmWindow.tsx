@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Alert02Icon, CheckmarkCircle02Icon, FolderOpenIcon, Loading03Icon } from "@hugeicons/core-free-icons";
@@ -18,14 +19,20 @@ function host(url: string) {
 }
 
 /**
- * The "New download" window for a download the browser handed over, like IDM's: what the file is,
- * where it goes and whether that drive has room, then start, keep for later or cancel. The
- * download waits, its first response open, until this window answers; closing it keeps the
- * download paused for later (handled by the app).
+ * The "New download" window for downloads the browser hands over, like IDM's: what the file is,
+ * where it goes and whether that drive has room, then start, keep for later or cancel. Each
+ * download waits, its first response open, until answered. The app keeps this window loaded but
+ * hidden and sends it the download to ask about ("ask"), one at a time; after an answer it hides
+ * it or sends the next. Closing it keeps the download paused for later.
  */
-export function ConfirmWindow({ id }: { id: string }) {
+export function ConfirmWindow() {
   const win = getCurrentWindow();
+  /** The download to ask about, and which request this is (the same one can be asked about again). */
+  const [asked, setAsked] = useState<{ id: string; n: number } | null>(null);
+  const id = asked?.id ?? null;
   const [download, setDownload] = useState<Download | null>(null);
+  /** The request this window was last shown for. */
+  const [shownFor, setShownFor] = useState(0);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [fileName, setFileName] = useState("");
   const [dir, setDir] = useState("");
@@ -35,29 +42,54 @@ export function ConfirmWindow({ id }: { id: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // the download as the engine has it; gone (removed in the main window) closes this one
+  // which download to ask about: the current one when this window loads, then each one the app sends
   useEffect(() => {
+    const askAbout = (id: string) => setAsked((a) => ({ id, n: (a?.n ?? 0) + 1 }));
+    const un = listen<string>("ask", (e) => askAbout(e.payload));
+    api.askingNow().then((now) => now && askAbout(now));
+    return () => {
+      un.then((f) => f());
+    };
+  }, []);
+
+  // the download as the engine has it, shown once loaded; kept fresh while asked about
+  useEffect(() => {
+    if (!asked) return;
+    const { id } = asked;
     let first = true;
+    setDownload(null);
+    setBusy(false);
+    setError("");
     const load = async () => {
       const d = await api.get(id).catch(() => null);
-      if (!d) {
-        if (!first) win.close();
-        return;
-      }
+      if (!d) return;
       setDownload(d);
       if (first) {
         first = false;
         setFileName(d.file_name);
         setDir(d.dir);
         setConnections(d.connections);
-        requestAnimationFrame(() => requestAnimationFrame(() => win.show().then(() => win.setFocus())));
       }
     };
     load();
     const timer = setInterval(load, 1000);
     return () => clearInterval(timer);
-  }, [id, win]);
+  }, [asked]);
 
+  // show the window once the download is drawn in it. Not on an animation frame: a hidden web view
+  // gets none.
+  useLayoutEffect(() => {
+    if (!asked || download?.id !== asked.id || shownFor === asked.n) return;
+    setShownFor(asked.n);
+    // centred each time: window managers place a reused window where they like
+    win
+      .center()
+      .catch(() => {})
+      .then(() => win.show())
+      .then(() => win.setFocus());
+  }, [asked, download, shownFor, win]);
+
+  // read again for every download: this window lives as long as the app
   useEffect(() => {
     api.getSettings().then((s) => {
       setSettings(s);
@@ -66,7 +98,7 @@ export function ConfirmWindow({ id }: { id: string }) {
       if (s.theme === "system") root.removeAttribute("data-theme");
       else root.setAttribute("data-theme", s.theme);
     });
-  }, []);
+  }, [asked]);
 
   useEffect(() => {
     if (!dir) return;
@@ -77,27 +109,31 @@ export function ConfirmWindow({ id }: { id: string }) {
     };
   }, [dir]);
 
+  // the app hides this window or moves on to the next download once answered
   const answer = useCallback(
     async (start: boolean) => {
+      if (!id) return;
       setBusy(true);
       setError("");
       try {
         await api.confirm(id, { file_name: fileName.trim() || undefined, dir, connections, start });
         if (settings && !ask) await api.saveSettings({ ...settings, ask_before_download: false });
-        await win.close();
       } catch (e) {
         setError(String(e));
         setBusy(false);
       }
     },
-    [id, fileName, dir, connections, ask, settings, win],
+    [id, fileName, dir, connections, ask, settings],
   );
 
   const cancel = useCallback(async () => {
+    if (!id) return;
     setBusy(true);
-    await api.remove([id], true).catch(() => {});
-    await win.close();
-  }, [id, win]);
+    await api.cancelAsked(id).catch((e) => {
+      setError(String(e));
+      setBusy(false);
+    });
+  }, [id]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -107,12 +143,12 @@ export function ConfirmWindow({ id }: { id: string }) {
         answer(true);
       } else if (e.key === "Escape") {
         // like closing the window: kept for later
-        win.close();
+        answer(false);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [answer, busy, win]);
+  }, [answer, busy]);
 
   const browse = async () => {
     // the folder picker must not open underneath this always-on-top window
@@ -214,6 +250,19 @@ export function ConfirmWindow({ id }: { id: string }) {
             <span>free space unknown</span>
           )}
         </div>
+      </div>
+
+      <div className="split-preview">
+        <div className="split-bars" aria-hidden="true">
+          {Array.from({ length: resumable ? connections : 1 }, (_, i) => (
+            <span key={i} />
+          ))}
+        </div>
+        <span>
+          {resumable
+            ? `${connections} ranges downloaded side by side, one per connection; a connection that finishes early takes over half of the biggest range left`
+            : "one range over one connection: this server can't send parts of the file"}
+        </span>
       </div>
 
       {error && (
