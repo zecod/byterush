@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 pub enum Status {
     Queued,
     Connecting,
+    /// Handed over by the browser and on hold, its first response open, until the user answers
+    /// the "New download" window (`Manager::confirm`).
+    Waiting,
     Downloading,
     /// All bytes are in; the file is being flushed, rebuilt from its parts or moved into place.
     Finishing,
@@ -94,6 +97,9 @@ pub struct Settings {
     pub user_agent: String,
     /// Continue the downloads that were running when the app closed (or crashed).
     pub resume_on_startup: bool,
+    /// Ask where to save a download the browser hands over, in the "New download" window, before
+    /// it goes on.
+    pub ask_before_download: bool,
 }
 
 impl Default for Settings {
@@ -111,6 +117,7 @@ impl Default for Settings {
             theme: "system".into(),
             user_agent: String::new(),
             resume_on_startup: true,
+            ask_before_download: true,
         }
     }
 }
@@ -246,6 +253,26 @@ pub struct AddRequest {
     /// Browser request headers to replay (see `Record::headers`).
     #[serde(default)]
     pub headers: Vec<(String, String)>,
+    /// Hold the download after its first response until `Manager::confirm` (`Status::Waiting`).
+    #[serde(default)]
+    pub confirm: bool,
+}
+
+/// The user's answer in the "New download" window. Empty fields keep what the download has.
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct Confirmation {
+    pub file_name: Option<String>,
+    pub dir: Option<String>,
+    pub connections: Option<u8>,
+    /// Start now; otherwise it stays paused for later.
+    pub start: bool,
+}
+
+/// Room on the drive a folder is on.
+#[derive(Clone, Debug, Serialize)]
+pub struct DiskSpace {
+    pub free: u64,
+    pub total: u64,
 }
 
 /// What the browser saw for a download it handed over; the first response must match it.

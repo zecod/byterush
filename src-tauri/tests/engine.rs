@@ -50,6 +50,7 @@ async fn segmented_download_pause_resume() {
             size: None,
             start: true,
             headers: Vec::new(),
+            confirm: false,
         })
         .await
         .unwrap();
@@ -87,6 +88,7 @@ async fn duplicate_names_get_numbered() {
         size: None,
         start: true,
         headers: Vec::new(),
+        confirm: false,
     };
     let a = manager.add(req()).await.unwrap();
     let b = manager.add(req()).await.unwrap();

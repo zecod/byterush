@@ -1,13 +1,13 @@
 pub mod bridge;
 pub mod engine;
 
-use engine::{AddRequest, DownloadView, Manager, ProbeInfo, Settings};
+use engine::{AddRequest, Confirmation, DiskSpace, DownloadView, Manager, ProbeInfo, Settings};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager as _, RunEvent, State};
+use tauri::{AppHandle, Emitter, Manager as _, RunEvent, State, WindowEvent};
 use tauri_plugin_opener::OpenerExt;
 
 /// Set by the UI to receive every row again (on startup or after a reload).
@@ -34,7 +34,12 @@ struct BridgeState(Arc<Mutex<bridge::BridgeStatus>>);
 struct Captured {
     id: String,
     source: String,
+    /// It waits for the user in its "New download" window.
+    waiting: bool,
 }
+
+/// Label of the "New download" window of a download.
+const CONFIRM_PREFIX: &str = "confirm-";
 
 #[tauri::command(async)]
 fn bridge_status(state: State<'_, BridgeState>) -> bridge::BridgeStatus {
@@ -103,6 +108,64 @@ fn resume_downloads(manager: State<'_, Manager>, ids: Vec<String>) {
 #[tauri::command(async)]
 fn remove_downloads(manager: State<'_, Manager>, ids: Vec<String>, delete_files: bool) {
     manager.remove(&ids, delete_files);
+}
+
+/// The answer from a "New download" window. Starting brings the main window forward with the
+/// download in it, the way a download manager shows its progress.
+#[tauri::command(async)]
+fn confirm_download(app: AppHandle, manager: State<'_, Manager>, id: String, choice: Confirmation) -> Result<String, String> {
+    let start = choice.start;
+    let file_name = manager.confirm(&id, choice)?;
+    if start && let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+    Ok(file_name)
+}
+
+#[tauri::command(async)]
+fn disk_space(dir: String) -> Option<DiskSpace> {
+    engine::disk_space(std::path::Path::new(&dir))
+}
+
+/// Ask the user about a download the browser handed over, IDM style: a small window on top of the
+/// browser with its name, size, folder and the room left on that drive. It holds the download
+/// until answered (see `Manager::confirm`); closing it keeps the download paused for later.
+fn open_confirm_window(app: &AppHandle, id: &str) {
+    let label = format!("{CONFIRM_PREFIX}{id}");
+    if let Some(window) = app.get_webview_window(&label) {
+        let _ = window.set_focus();
+        return;
+    }
+    // the window learns which download it is about from its label
+    let built = tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::default())
+        .title("New download · Byterush")
+        .inner_size(620.0, 452.0)
+        .resizable(false)
+        .maximizable(false)
+        .minimizable(false)
+        .always_on_top(true)
+        .center()
+        .focused(true)
+        // shown by the UI once drawn, like the main window
+        .visible(false)
+        .build();
+    match built {
+        Ok(window) => {
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(1500));
+                if !window.is_visible().unwrap_or(true) {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            });
+        }
+        // no window to ask in: don't keep the download waiting
+        Err(_) => {
+            let _ = app.state::<Manager>().confirm(id, Confirmation { start: true, ..Default::default() });
+        }
+    }
 }
 
 #[tauri::command(async)]
@@ -225,6 +288,14 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        // a "New download" window closed without an answer keeps its download, paused for later
+        .on_window_event(|window, event| {
+            if let WindowEvent::Destroyed = event
+                && let Some(id) = window.label().strip_prefix(CONFIRM_PREFIX)
+            {
+                let _ = window.state::<Manager>().confirm(id, Confirmation::default());
+            }
+        })
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
@@ -237,16 +308,19 @@ pub fn run() {
             spawn_progress_loop(app.handle().clone(), manager.clone(), resync.0.clone());
             app.manage(resync);
 
-            // tell the UI about taken-over downloads and flash the taskbar instead of stealing focus
+            // tell the UI about taken-over downloads; one that waits for the user gets its "New
+            // download" window, the others flash the taskbar instead of stealing focus
             let handle = app.handle().clone();
-            let on_captured: bridge::OnCaptured = Arc::new(move |id: &str, source: &str| {
-                let _ = handle.emit("browser-captured", Captured { id: id.into(), source: source.into() });
-                if let Some(window) = handle.get_webview_window("main") {
+            let on_captured: bridge::OnCaptured = Arc::new(move |id: &str, source: &str, waiting: bool| {
+                let _ = handle.emit("browser-captured", Captured { id: id.into(), source: source.into(), waiting });
+                if waiting {
+                    open_confirm_window(&handle, id);
+                } else if let Some(window) = handle.get_webview_window("main") {
                     let _ = window.request_user_attention(Some(tauri::UserAttentionType::Informational));
                 }
             });
             let runtime = tauri::async_runtime::block_on(async { tokio::runtime::Handle::current() });
-            let status = bridge::start(manager.clone(), &runtime, on_captured);
+            let status = bridge::start(manager.clone(), &runtime, bridge::Hooks { on_captured, can_ask: true });
             app.manage(BridgeState(status));
             spawn_clipboard_watcher(app.handle().clone(), manager);
 
@@ -273,6 +347,8 @@ pub fn run() {
             pause_downloads,
             resume_downloads,
             remove_downloads,
+            confirm_download,
+            disk_space,
             get_settings,
             save_settings,
             open_download,

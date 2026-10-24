@@ -14,6 +14,11 @@ entries for people who use Byterush, not for people who read the diff.
 
 ### Added
 
+- A "New download" window for downloads the browser hands over, like IDM's: the file's name and
+  size, the folder it goes to (with a folder picker), the room left on that drive and the number
+  of connections, then *start download*, *later* or *cancel*. The download waits with its first
+  connection open, so links that work only once still work. Closing the window keeps the download
+  paused for later. It can be turned off in the settings or from the window itself.
 - Downloads that were running continue on the next start, after a restart or a crash (a setting,
   on by default).
 - Expired links can be continued: start the same download again in the browser, or right-click →

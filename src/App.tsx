@@ -18,7 +18,7 @@ import {
   Settings02Icon,
 } from "@hugeicons/core-free-icons";
 import type { Delta, Download, Settings } from "./api";
-import { api, isActive, isMac, isWorking, shortcut } from "./api";
+import { api, isActive, isMac, isPending, isWorking, shortcut } from "./api";
 import { AddDialog } from "./components/AddDialog";
 import { DetailsPanel } from "./components/DetailsPanel";
 import { DownloadTable } from "./components/DownloadTable";
@@ -154,9 +154,12 @@ export default function App() {
     const unClipboard = listen<string>("clipboard-url", (e) =>
       toast({ kind: "info", text: `copied · ${e.payload}`, actions: [{ label: "download", run: () => setAddUrl(e.payload) }] }, 9000),
     );
-    const unCaptured = listen<{ id: string; source: string }>("browser-captured", (e) => {
-      const d = store.current.get(e.payload.id);
-      toast({ kind: "info", text: `from browser · ${d?.file_name ?? "new download"}` }, 4000);
+    const unCaptured = listen<{ id: string; source: string; waiting: boolean }>("browser-captured", (e) => {
+      // one waiting for an answer has its own "New download" window
+      if (!e.payload.waiting) {
+        const d = store.current.get(e.payload.id);
+        toast({ kind: "info", text: `from browser · ${d?.file_name ?? "new download"}` }, 4000);
+      }
       focusDownload(e.payload.id);
     });
     unDelta.then(() => api.sync()).catch(fail);
@@ -201,7 +204,7 @@ export default function App() {
   const ids = selectedDownloads.map((d) => d.id);
   const single = selectedDownloads.length === 1 ? selectedDownloads[0] : null;
   const canResume = selectedDownloads.some((d) => d.status === "paused" || d.status === "error");
-  const canPause = selectedDownloads.some((d) => isActive(d.status) || d.status === "queued");
+  const canPause = selectedDownloads.some((d) => isActive(d.status) || isPending(d.status));
   const activeCount = downloads.filter((d) => isWorking(d.status)).length;
 
   const onSelect = (id: string, e: React.MouseEvent) => {
@@ -226,7 +229,7 @@ export default function App() {
 
   const activate = (d: Download) => {
     if (d.status === "completed") api.open(d.id).catch(fail);
-    else if (isActive(d.status) || d.status === "queued") api.pause([d.id]);
+    else if (isActive(d.status) || isPending(d.status)) api.pause([d.id]);
     else api.resume([d.id]);
   };
 
@@ -388,7 +391,7 @@ export default function App() {
             <button onClick={() => api.open(menu.d.id).catch(fail)}>
               <Icon icon={LinkSquare02Icon} size={15} /> open
             </button>
-          ) : isActive(menu.d.status) || menu.d.status === "queued" ? (
+          ) : isActive(menu.d.status) || isPending(menu.d.status) ? (
             <button onClick={() => api.pause(ids)}>
               <Icon icon={PauseIcon} size={15} /> pause
             </button>
@@ -400,7 +403,7 @@ export default function App() {
           <button onClick={() => api.reveal(menu.d.id).catch(fail)}>
             <Icon icon={FolderOpenIcon} size={15} /> show in folder
           </button>
-          {menu.d.status !== "completed" && !isWorking(menu.d.status) && menu.d.status !== "queued" && (
+          {menu.d.status !== "completed" && !isWorking(menu.d.status) && !isPending(menu.d.status) && (
             <button onClick={() => setRefreshFor(menu.d)}>
               <Icon icon={Link01Icon} size={15} /> update link…
             </button>
