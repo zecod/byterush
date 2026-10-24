@@ -48,7 +48,7 @@ function chart(theme) {
     const scale = (W - left - right) / max;
     parts.push(
       `<text x="${pad}" y="${y + 4}" ${font} font-size="15" font-weight="700" fill="${t.text}">${esc(f.title)} · ${esc(f.server)}</text>`,
-      `<text x="${pad}" y="${y + 24}" ${font} font-size="12" fill="${t.muted}">${esc(f.file)}${cutNote(runs)}</text>`,
+      `<text x="${pad}" y="${y + 24}" ${font} font-size="12" fill="${t.muted}">${esc(f.file)}${f.how ? ` · ${esc(f.how)}` : ""}${cutNote(runs)}</text>`,
     );
     const top = y + 40;
     // recessive grid: the baseline only
@@ -57,7 +57,7 @@ function chart(theme) {
       const by = top + i * rowH;
       const w = Math.max(3, r.s * scale);
       const color = r.connections === 1 ? t.browser : t.byterush;
-      const label = r.connections === 1 ? "1 connection" : `Byterush · ${r.connections}`;
+      const label = r.label ?? (r.connections === 1 ? "1 connection" : `Byterush · ${r.connections}`);
       // a baseline that never finished (the server reset it) only gives a lower bound
       const cut = runs.find((x) => x.connections === 1).incomplete;
       const speedup = r.connections === 1 ? (cut ? "" : "baseline") : `${cut ? "≥ " : ""}${(base / r.s).toFixed(1)}× faster`;
