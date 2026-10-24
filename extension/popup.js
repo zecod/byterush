@@ -1,10 +1,14 @@
-import { APP_NAME, getRecent, getSettings, hostOf, isExcluded, saveSettings } from "./shared.js";
+import { APP_NAME, SETUP_URL, getRecent, getSettings, hostOf, isExcluded, saveSettings } from "./shared.js";
 
 const $ = (id) => document.getElementById(id);
 
 async function render() {
   $("app-name").textContent = APP_NAME.toLowerCase();
   $("footer-note").textContent = `tip: right-click a link → download with ${APP_NAME.toLowerCase()}`;
+  $("setup-link").onclick = (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: SETUP_URL });
+  };
 
   const settings = await getSettings();
   $("enabled").checked = settings.enabled;
