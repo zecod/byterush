@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Set up the Byterush browser extension in Chrome, Edge, Brave, Opera or Vivaldi, check that it reaches the app, and fix the cases where a download stays in the browser." />
+    <meta property="og:title" content="Set up the Byterush browser extension" />
+    <meta property="og:description" content="Load the extension, check it reaches the app, and fix downloads that stay in the browser." />
+    <meta property="og:type" content="website" />
+    <title>Extension setup | Byterush</title>
+    <link rel="icon" type="image/svg+xml" href="assets/icon-16.svg" />
+    <link rel="preload" href="assets/fonts/plex-mono-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="assets/fonts/plex-mono-700.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="setup.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="frame">
+      <header class="top">
+        <a class="logo" href="index.html" aria-label="Byterush home">
+          <img src="assets/icon.svg" alt="" width="30" height="30" />
+          <span><span class="logo-dim">byte</span>rush</span>
+        </a>
+        <nav class="nav" id="nav" aria-label="Main">
+          <ul>
+            <li><a href="index.html#features">Features</a></li>
+            <li><a href="index.html#extension">Extension</a></li>
+            <li><a href="#install" aria-current="page">Setup</a></li>
+            <li><a href="#troubleshooting">Troubleshooting</a></li>
+            <li><a href="https://github.com/zecod/byterush" data-link="github">GitHub</a></li>
+            <li><a class="button button-solid" href="index.html#download"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0-3.5-3.5M8 10l3.5-3.5M3 13.5h10"/></svg>Download</a></li>
+          </ul>
+        </nav>
+        <button class="menu" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 5h11M2.5 11h11"/></svg>
+        </button>
+      </header>
+
+      <main id="main">
+        <section class="hero su-hero" aria-labelledby="setup-title">
+          <p class="kicker"><span aria-hidden="true">[*]</span> browser extension · setup</p>
+          <h1 id="setup-title">Hand your browser's downloads to Byterush</h1>
+          <p class="hero-sub">The extension passes each download your browser starts to the Byterush app on this computer, with the same cookies, so it downloads over many connections instead of one. It takes two minutes to load, and this page tells you when it works.</p>
+
+          <div class="su-status" data-state="checking" aria-live="polite">
+            <span class="su-light" aria-hidden="true"></span>
+            <div class="su-msg">
+              <strong data-status-title>Checking this browser…</strong>
+              <p data-status-text>Looking for the Byterush extension.</p>
+            </div>
+            <button class="button button-ghost button-small" type="button" data-recheck>Check again</button>
+          </div>
+          <ol class="su-checks" aria-label="What was checked">
+            <li data-check="browser"><span class="su-mark" aria-hidden="true"></span>a supported browser</li>
+            <li data-check="extension"><span class="su-mark" aria-hidden="true"></span>the extension is loaded</li>
+            <li data-check="app"><span class="su-mark" aria-hidden="true"></span>it reaches the Byterush app</li>
+            <li data-check="capture"><span class="su-mark" aria-hidden="true"></span>catching downloads is on</li>
+          </ol>
+        </section>
+
+        <section class="block" id="install" aria-labelledby="install-title">
+          <p class="kicker"><span aria-hidden="true">[*]</span> 01 · install</p>
+          <h2 id="install-title">Load the extension in <span data-browser-name>Chrome</span></h2>
+          <p class="lead">It isn't in the browser's web store yet, so it is loaded from the folder that comes with the app. Pick your browser if it isn't this one:</p>
+          <div class="seg su-pick" role="group" aria-label="Browser">
+            <button type="button" data-pick="chrome" aria-pressed="true">Chrome</button>
+            <button type="button" data-pick="edge" aria-pressed="false">Edge</button>
+            <button type="button" data-pick="brave" aria-pressed="false">Brave</button>
+            <button type="button" data-pick="opera" aria-pressed="false">Opera</button>
+            <button type="button" data-pick="vivaldi" aria-pressed="false">Vivaldi</button>
+          </div>
+
+          <div class="install-wrap">
+            <ol class="install su-install">
+              <li><span class="step-n">01</span><div><strong>Install and start Byterush.</strong> <a class="underline" href="index.html#download">Download it</a> for Windows, macOS or Linux. The extension only hands downloads over while the app is running.</div></li>
+              <li><span class="step-n">02</span><div><strong>Find the extension folder.</strong> In the app, open <strong>Settings → browser → set up the extension…</strong>. It shows the folder's path with a copy button, and opens the extensions page of each browser it finds. Or get the <a class="underline" href="https://github.com/zecod/byterush/releases/latest" data-ext-zip>extension .zip<span data-size></span></a> and unzip it.</div></li>
+              <li><span class="step-n">03</span><div><strong>Open <code data-ext-url>chrome://extensions</code></strong> <button class="su-copy" type="button" data-copy-url>copy</button><br />Websites can't link to browser pages: paste it in the address bar.</div></li>
+              <li><span class="step-n">04</span><div><strong>Turn on Developer mode</strong>: <span data-dev-where>the switch at the top right of the page</span>.</div></li>
+              <li><span class="step-n">05</span><div><strong>Click Load unpacked</strong> and choose the <code>extension</code> folder (the one with <code>manifest.json</code> in it).</div></li>
+              <li><span class="step-n">06</span><div><strong>Pin it.</strong> <span data-pin-how>The puzzle piece in the toolbar → the pin next to Byterush.</span> Its popup shows each hand-over, and why a download stayed in the browser.</div></li>
+              <li><span class="step-n">07</span><div><strong>Reload this page.</strong> The status at the top turns green once the extension reaches the app. Then start any download.</div></li>
+            </ol>
+            <div class="xmock" aria-hidden="true">
+              <div class="xm-bar"><i></i><i></i><i></i><span class="xm-url" data-ext-url>chrome://extensions</span></div>
+              <div class="xm-head"><b>Extensions</b><span class="xm-dev"><span class="xm-n">04</span>Developer mode<span class="p-switch on"></span></span></div>
+              <div class="xm-actions"><span class="xm-btn hi"><span class="xm-n">05</span>Load unpacked</span><span class="xm-btn">Pack extension</span><span class="xm-btn">Update</span></div>
+              <div class="xm-card">
+                <img src="assets/icon-16.svg" alt="" width="28" height="28" />
+                <span><b>Byterush — download catcher</b><small>Hands your browser downloads to the Byterush app.</small></span>
+                <span class="p-switch on"></span>
+              </div>
+            </div>
+          </div>
+
+          <h3 class="sub">Also worth setting</h3>
+          <ul class="stars su-extra">
+            <li><span class="star" aria-hidden="true">[*]</span><div><strong>Private windows.</strong> Extensions are off there by default. On the extensions page: Byterush → <strong>Details</strong> → <strong data-private-name>Allow in Incognito</strong>.</div></li>
+            <li><span class="star" aria-hidden="true">[*]</span><div><strong>Ask before each download.</strong> On by default: a New download window shows the file, its size, the folder and the free space, with Start and Cancel, like IDM. Turn it off in <strong>Settings → browser</strong> to start right away.</div></li>
+            <li><span class="star" aria-hidden="true">[*]</span><div><strong>Leave small files to the browser.</strong> Off by default. In <strong>Settings → browser</strong>, “leave downloads smaller than 1 GB to the browser” keeps quick downloads in the browser and sends only big ones to Byterush. Pick any size.</div></li>
+            <li><span class="star" aria-hidden="true">[*]</span><div><strong>Right-click.</strong> “Download with Byterush” on a link, video, audio or image always goes to the app, whatever its size.</div></li>
+          </ul>
+        </section>
+
+        <section class="block" id="troubleshooting" aria-labelledby="trouble-title">
+          <p class="kicker"><span aria-hidden="true">[*]</span> 02 · troubleshooting</p>
+          <h2 id="trouble-title">A download stayed in the browser</h2>
+          <p class="lead">Byterush only cancels the browser's copy once it has the same file itself, so nothing is lost when it can't take one: the browser just carries on. The extension's popup lists the last downloads with the reason, and the app shows a notice when it tried and couldn't. The usual reasons:</p>
+          <ul class="faq">
+            <li><details><summary><span class="plus" aria-hidden="true"></span>“Byterush is not running”</summary><div class="answer"><p>The extension hands downloads to the app on <code>127.0.0.1:51723</code>, so the app has to be open. If it is running and the popup still says so, another program may hold that port: the app's <strong>Settings → browser</strong> says whether it is listening.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Nothing at all reaches the app</summary><div class="answer"><p>Check the switches: <strong>catch downloads</strong> in the extension's popup, the switch for the site you are on just below it, and <strong>catch downloads from the browser extension</strong> in the app's <strong>Settings → browser</strong>. In a private window, the extension must be allowed there (see above).</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Small files stay in the browser</summary><div class="answer"><p>That is the “leave downloads smaller than … to the browser” setting. Turn it off, or lower the size, in <strong>Settings → browser</strong>. Downloads picked with right-click → <strong>Download with Byterush</strong> ignore it.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>“the server answered 403”, a login page, or a different file</summary><div class="answer"><p>Byterush asks for the file with the browser's own cookies, user agent and referer, and checks the answer before taking over. Some sites still refuse a second request: one-time links, downloads behind a bot check, or links tied to a single connection. The browser keeps those, on purpose.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Forms, generated files and “blob:” downloads</summary><div class="answer"><p>A file made by a form submission (POST) or built inside the page (<code>blob:</code> and <code>data:</code> links) exists only in that browser tab, so another program can't fetch it. These always stay in the browser.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Busy servers</summary><div class="answer"><p>When a server answers “too many requests” or “unavailable” (429, 502, 503, 504) or drops the first connection, Byterush waits a moment, up to three seconds or what the server asks for, and tries twice more before it leaves the download to the browser.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Developer mode is greyed out</summary><div class="answer"><p>The browser is managed by an organisation (a work or school computer) whose policy blocks extensions from folders. Ask your administrator, or use the app's clipboard watch: copy a download link and Byterush offers to download it.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>After updating Byterush</summary><div class="answer"><p>The update replaces the extension folder too. Click the reload arrow on Byterush's card on the extensions page, or restart the browser, to run the new version.</p></div></details></li>
+            <li><details><summary><span class="plus" aria-hidden="true"></span>Firefox and Safari</summary><div class="answer"><p>The extension is for Chromium browsers: Chrome, Edge, Brave, Opera and Vivaldi. In other browsers, copy the link (Byterush watches the clipboard) or paste it into <strong>add url</strong>.</p></div></details></li>
+          </ul>
+          <div class="ext-actions">
+            <a class="button button-solid" href="https://github.com/zecod/byterush/issues" data-link="issues">Report a download that didn't work <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4"/></svg></a>
+            <a class="button button-ghost" href="https://github.com/zecod/byterush#browser-extension" data-link="extension">How the extension works <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10m0 0L9 4m4 4-4 4"/></svg></a>
+          </div>
+        </section>
+      </main>
+
+      <footer class="links" aria-label="Project links">
+        <a href="https://github.com/zecod/byterush" data-link="github">GitHub</a>
+        <a href="https://github.com/zecod/byterush/releases" data-link="allReleases">Releases</a>
+        <a href="https://github.com/zecod/byterush/issues" data-link="issues">Issues</a>
+        <a href="index.html">Home</a>
+      </footer>
+    </div>
+    <div class="legal"><span>©2026 Byterush</span><span>Free and open source</span><a href="https://github.com/zecod/byterush" data-link="github">Source</a></div>
+  </body>
+</html>

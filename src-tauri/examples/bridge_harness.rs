@@ -43,6 +43,7 @@ async fn app(out: PathBuf) {
         // the automated test has nobody to answer a "New download" window
         bridge::Hooks {
             on_captured: Arc::new(|id: &str, source: &str, _waiting: bool| println!("CAPTURED {source} {id}")),
+            on_declined: Arc::new(|name: &str, reason: &str| println!("DECLINED {name}: {reason}")),
             can_ask: false,
         },
     );

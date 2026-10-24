@@ -32,6 +32,36 @@ const BENCHES = [
       "Average of two runs per setting with scripts/bench.sh; curl stands in for the browser, which also uses one connection per file.",
   },
   {
+    id: "10gb-helsinki",
+    title: "10.7 GB · Helsinki",
+    file: "10GB.bin",
+    size_mb: 10737.4,
+    server: "Hetzner Helsinki",
+    date: "2026-10-24",
+    runs: [
+      { label: "Chrome", connections: 1, seconds: 543.9 },
+      { label: "Byterush app · 16 connections", connections: 16, seconds: 59.5 },
+    ],
+    note:
+      "Chrome against the Byterush app, from the screen recordings in the demo video, both timed from the click; Byterush's time includes about 4 s in its New download window. " +
+      "It downloaded at the recording machine's disk speed (about 190 MB/s), so a faster disk finishes sooner. One run each.",
+  },
+  {
+    id: "10gb-falkenstein",
+    title: "10.7 GB · Falkenstein",
+    file: "10GB.bin",
+    size_mb: 10737.4,
+    server: "Hetzner Falkenstein",
+    date: "2026-10-24",
+    runs: [
+      { label: "Chrome", connections: 1, seconds: 299.1 },
+      { label: "Byterush app · 16 connections", connections: 16, seconds: 54.9 },
+    ],
+    note:
+      "Chrome against the Byterush app, from the screen recordings in the demo video, both timed from the click; Byterush's time includes about 4 s in its New download window. " +
+      "Closer than Helsinki, so one connection is faster; Byterush again downloaded at the recording machine's disk speed (about 210 MB/s). One run each.",
+  },
+  {
     id: "3-6gb",
     title: "3.6 GB · archive.org",
     file: "ED-360-png.tar",
@@ -127,7 +157,8 @@ document.addEventListener("keydown", (e) => {
 const fixed = (n, d) => n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 const fmtFactor = (x) => `${x >= 10 ? Math.round(x) : fixed(x, 1).replace(/\.0$/, "")}×`;
 const fmtSpeed = (mbps) => `${fixed(mbps, mbps >= 100 ? 0 : 1)}\u00a0MB/s`;
-const fmtSize = (mb) => (mb >= 1024 ? `${fixed(mb / 1024, 2)}\u00a0GB` : `${fixed(mb, mb < 10 ? 1 : 0)}\u00a0MB`);
+// size_mb is in decimal megabytes, like the titles ("10.7 GB"): 1 GB = 1000 MB here
+const fmtSize = (mb) => (mb >= 1000 ? `${fixed(mb / 1000, 2)}\u00a0GB` : `${fixed(mb, mb < 10 ? 1 : 0)}\u00a0MB`);
 const fmtBytes = (b) => (b >= 1073741824 ? `${fixed(b / 1073741824, 2)} GB` : `${fixed(b / 1048576, 1)} MB`);
 const fmtClock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 function fmtTime(sec) {
@@ -978,4 +1009,30 @@ $$(".tile, .hero").forEach((node) => onVisible(node, (visible) => node.classList
     play.hidden = true;
     video.controls = true;
   });
+
+  // the races: assets/video/<name>.{mp4,webm,jpg}
+  const DEMOS = {
+    demo: "Chrome alone against Chrome with Byterush, downloading the same 961 MB file",
+    "demo-10gb-helsinki": "Chrome alone against Chrome with Byterush, downloading the same 10.7 GB file from Helsinki",
+    "demo-10gb-falkenstein": "Chrome alone against Chrome with Byterush, downloading the same 10.7 GB file from Falkenstein",
+  };
+  const picks = $$("[data-demo]");
+  const choose = (name) => {
+    picks.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.demo === name)));
+    if (video.dataset.demo === name) return;
+    video.dataset.demo = name;
+    video.pause();
+    video.poster = `assets/video/${name}.jpg`;
+    video.setAttribute("aria-label", DEMOS[name]);
+    const [mp4, webm] = video.querySelectorAll("source");
+    mp4.src = `assets/video/${name}.mp4`;
+    webm.src = `assets/video/${name}.webm`;
+    msg.hidden = true;
+    video.controls = false;
+    play.hidden = false;
+    video.load(); // preload="none": nothing is fetched until play
+  };
+  picks.forEach((b) => b.addEventListener("click", () => choose(b.dataset.demo)));
+  video.dataset.demo = "demo";
+  $("[data-demo-seg]").hidden = false;
 }

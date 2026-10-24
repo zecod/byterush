@@ -1,7 +1,9 @@
 export const APP_NAME = "Byterush";
 export const API = "http://127.0.0.1:51723/v1";
+/** The setup guide on the website (also linked from the popup). */
+export const SETUP_URL = "https://zecod.github.io/byterush/setup.html";
 
-const DEFAULTS = { enabled: true, excluded: [], minSizeKb: 0 };
+const DEFAULTS = { enabled: true, excluded: [] };
 
 export async function getSettings() {
   const { settings } = await chrome.storage.local.get("settings");
@@ -29,6 +31,13 @@ export function fileFromUrl(url) {
   } catch {
     return url;
   }
+}
+
+/** "Microsoft Edge", "Brave", "Google Chrome"…: the browser this extension runs in. */
+export function browserName() {
+  const brands = navigator.userAgentData?.brands?.map((b) => b.brand) ?? [];
+  const known = ["Microsoft Edge", "Brave", "Opera", "Vivaldi", "Google Chrome", "Chromium"];
+  return known.find((k) => brands.includes(k)) ?? (/Edg\//.test(navigator.userAgent) ? "Microsoft Edge" : "Chrome");
 }
 
 /** A site is excluded when it or a parent domain is on the list. */

@@ -66,6 +66,58 @@
       ]
     },
     {
+      "id": "hetzner10g-hel",
+      "title": "10.7 GB test file",
+      "file": "10GB.bin",
+      "url": "https://hel1-speed.hetzner.com/10GB.bin",
+      "server": "Hetzner Helsinki",
+      "bytes": 10737418240,
+      "how": "Chrome vs the Byterush app (16 connections), screen-recorded 24 Oct 2026",
+      "note": "the 10 GB demo video, both timed from the click; Byterush's time includes about 4 s in its New download window, and it downloaded at the VM's disk speed (about 190 MB/s); one run each",
+      "runs": [
+        {
+          "connections": 1,
+          "label": "Chrome",
+          "seconds": [
+            543.93
+          ]
+        },
+        {
+          "connections": 16,
+          "label": "Byterush app · 16",
+          "seconds": [
+            59.52
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hetzner10g-fsn",
+      "title": "10.7 GB test file",
+      "file": "10GB.bin",
+      "url": "https://fsn1-speed.hetzner.com/10GB.bin",
+      "server": "Hetzner Falkenstein",
+      "bytes": 10737418240,
+      "how": "Chrome vs the Byterush app (16 connections), screen-recorded 24 Oct 2026",
+      "note": "the 10 GB demo video, both timed from the click; Byterush's time includes about 4 s in its New download window, and it downloaded at the VM's disk speed (about 210 MB/s); one run each",
+      "runs": [
+        {
+          "connections": 1,
+          "label": "Chrome",
+          "seconds": [
+            299.15
+          ]
+        },
+        {
+          "connections": 16,
+          "label": "Byterush app · 16",
+          "seconds": [
+            54.89
+          ]
+        }
+      ]
+    },
+    {
       "id": "bbb",
       "title": "62 MB video",
       "file": "big_buck_bunny_720p_surround.mp4",

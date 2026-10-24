@@ -7,6 +7,7 @@ Pushing to `main` publishes it to GitHub Pages through `.github/workflows/pages.
 - Layout follows opencode.ai's: one bordered 1080 px column, IBM Plex Mono, black and white with the brand's pale lime for a few highlights, light and dark from the system setting.
 - IBM Plex Mono is served from `assets/fonts/`. The only request to another site is the GitHub API call for the latest release; there are no analytics or CDNs.
 - Sections: hero (with speed lanes), the app window (Fig 1), in action (the demo video, then light/dark screenshots), speed tests (Fig 2), features as illustrated tiles, how the split works (Fig 3), browser extension (Fig 4), comparison with a browser download, downloads per platform, FAQ.
+- `setup.html` (with `setup.js`) is the extension setup page: steps per browser, a live check and troubleshooting. The check sends the extension a `status` message; its manifest accepts messages from `https://zecod.github.io/*` and `localhost` only (`externally_connectable`), and Chromium exposes `chrome.runtime` to the page only while such an extension is installed. The extension's popup links here.
 - The feature illustrations are inline SVG animated with CSS. They pause off screen and hold still under `prefers-reduced-motion`.
 
 ## Speed numbers
@@ -15,7 +16,7 @@ Pushing to `main` publishes it to GitHub Pages through `.github/workflows/pages.
 
 ## Media
 
-- `assets/video/demo.{mp4,webm}` and its poster `assets/video/demo.jpg`: Chrome alone against Chrome with Byterush on the same file, played inline. Made in [`../video`](../video/README.md) from two real screen recordings; `npm run publish` there writes these files. H.264, with VP9 for browsers without H.264 (some open-source Chromium builds). No video bytes load until someone presses play; if a file is missing the player says so.
+- `assets/video/demo.{mp4,webm}` and its poster `assets/video/demo.jpg`: Chrome alone against Chrome with Byterush on the same 961 MB file, played inline. `demo-10gb-helsinki` and `demo-10gb-falkenstein` (same three files each) are the 10.7 GB races; buttons above the player switch between them. Made in [`../video`](../video/README.md) from two real screen recordings; `npm run publish` there writes these files. H.264, with VP9 for browsers without H.264 (some open-source Chromium builds). No video bytes load until someone presses play; if a file is missing the player says so.
 - `assets/screens/app-dark.webp` and `assets/screens/app-light.webp`: the app window, 2480×1560.
 
 Everything else on the page is drawn with HTML, CSS and inline SVG.
