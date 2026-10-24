@@ -8,12 +8,11 @@ import App from "./App";
 import { ConfirmWindow } from "./components/ConfirmWindow";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
-// a "New download" window is labelled after its download: "confirm-<id>"
-const label = getCurrentWindow().label;
-const confirmId = label.startsWith("confirm-") ? label.slice("confirm-".length) : null;
+// the same page serves the main window and the "New download" window
+const asking = getCurrentWindow().label === "confirm";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <ErrorBoundary area="app">{confirmId ? <ConfirmWindow id={confirmId} /> : <App />}</ErrorBoundary>
+    <ErrorBoundary area="app">{asking ? <ConfirmWindow /> : <App />}</ErrorBoundary>
   </React.StrictMode>,
 );
