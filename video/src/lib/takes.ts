@@ -21,12 +21,12 @@ export interface Race {
 
 /** 961 MB from archive.org: the demo on the website and the README's GIF. */
 export const SINTEL: Race = {
-  chrome: { src: "takes/a.mp4", click: 2.628, done: 223.931 },
-  byterush: { src: "takes/b.mp4", click: 2.625, asked: 5.633, started: 7.631, done: 15.917 },
+  chrome: { src: "takes/a.mp4", click: 2.232, done: 784.369 },
+  byterush: { src: "takes/b.mp4", click: 2.639, asked: 5.292, started: 7.299, done: 19.864 },
   file: { name: "Sintel_Documentary_by_Ali_Boubred.avi", size: "961 MB", site: "archive.org" },
   connections: 32,
   realRate: 1,
-  rate: 20,
+  rate: 40,
   recorded: "recorded 24 Oct 2026",
 };
 

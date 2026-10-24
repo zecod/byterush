@@ -39,7 +39,7 @@ publish() {
 }
 
 want=${1:-all}
-[ "$want" = all ] || [ "$want" = demo ] && publish Demo demo 11.4 7.6 13
+[ "$want" = all ] || [ "$want" = demo ] && publish Demo demo 18.5 6.6 15
 # 10 GB: the GIF runs from Byterush finishing, through Chrome fast-forwarding, to the result
 [ "$want" = all ] || [ "$want" = demo-10gb-helsinki ] && publish Demo10GBHelsinki demo-10gb-helsinki 18.5 30 17.5
 [ "$want" = all ] || [ "$want" = demo-10gb-falkenstein ] && publish Demo10GBFalkenstein demo-10gb-falkenstein 18.5
