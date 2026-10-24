@@ -88,7 +88,7 @@ Hetzner's 10.7 GB test file, clicked in Chrome twice, one take right after the o
 <tr><td width="50%" valign="top">
 
 **Speed**
-- Up to 32 connections per download (8 by default)
+- Up to 32 connections per download (16 by default)
 - Dynamic re-splitting: a connection that finishes takes over half of the largest range still in progress, so every connection stays busy until the last byte
 - The first request doubles as the size check: no extra round trip per file
 - Global speed cap, one click to toggle

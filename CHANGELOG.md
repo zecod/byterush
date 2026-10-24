@@ -57,6 +57,17 @@ entries for people who use Byterush, not for people who read the diff.
 - The system proxy settings and the operating system's root certificates are used, like the
   browser does (company proxies, private certificate authorities).
 - New landing page.
+- Faster on fast lines, lighter everywhere: each download has one disk writer, which the
+  connections hand full buffers to and read on (before, every connection wrote for itself and
+  sixteen of them queued on the file's lock), and the buffers are reused instead of allocated
+  fresh for every write. Against a local server, the same 2 GB download got 34% faster and used
+  45% less CPU, with a quarter of the context switches.
+- The part file is reserved in full before the download starts (Linux and macOS), so the file
+  system doesn't hunt for blocks at sixteen places at once (writes into the cache measured 3–9×
+  faster), the finished file is far less fragmented, and a full disk fails right away instead of
+  halfway through. Windows keeps a sparse file, which avoids NTFS zero-filling.
+- 16 connections per download by default (was 8): every benchmark gained from 8 to 16, and
+  servers that cap connections are handled already.
 
 ### Fixed
 
