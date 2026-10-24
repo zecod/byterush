@@ -50,6 +50,13 @@ export interface Settings {
   resume_on_startup: boolean;
   /** Ask where to save a browser download, in the "New download" window, before it goes on. */
   ask_before_download: boolean;
+  /** Leave downloads smaller than `small_file_limit_mb` to the browser (off by default). */
+  leave_small_to_browser: boolean;
+  small_file_limit_mb: number;
+  /** When the extension last checked in (ms, 0: never) and from which browser; kept by the app. */
+  extension_seen_ms: number;
+  extension_browser: string;
+  setup_hint_dismissed: boolean;
 }
 
 export interface ProbeInfo {
@@ -91,6 +98,17 @@ export interface BridgeStatus {
   port: number;
   error: string | null;
   extension_ids: string[];
+  /** Since this start of the app: when, from which browser and in which version it checked in. */
+  extension_seen_ms: number | null;
+  extension_browser: string | null;
+  extension_version: string | null;
+}
+
+/** A browser the extension can be installed in, found on this computer. */
+export interface Browser {
+  id: "chrome" | "edge" | "brave" | "vivaldi" | "opera" | "chromium";
+  name: string;
+  extensions_page: string;
 }
 
 export interface Delta {
@@ -115,6 +133,9 @@ export const api = {
   reveal: (id: string) => invoke<void>("reveal_download", { id }),
   bridgeStatus: () => invoke<BridgeStatus>("bridge_status"),
   openExtensionFolder: () => invoke<string>("open_extension_folder"),
+  extensionFolder: () => invoke<string | null>("extension_folder"),
+  installedBrowsers: () => invoke<Browser[]>("installed_browsers"),
+  openExtensionsPage: (id: Browser["id"]) => invoke<void>("open_extensions_page", { id }),
   /** Returns the file name the download got (" (1)" added when the folder has that name). */
   confirm: (id: string, choice: Confirmation) => invoke<string>("confirm_download", { id, choice }),
   /** "Cancel" in the "New download" window: drop the download and what it wrote. */
