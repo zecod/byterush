@@ -267,7 +267,7 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
         let check = mismatch(&opened, &expect);
         let _ = tx.send(match &check {
             Some(reason) => Err(reason.clone()),
-            None => Ok(()),
+            None => Ok(opened.size),
         });
         if let Some(reason) = check {
             bail!(reason);
