@@ -28,17 +28,17 @@
 
 <p align="center">
   <a href="https://zecod.github.io/byterush/#demo">
-    <img src="docs/media/demo.gif" width="860" alt="Two real screen recordings side by side, timed from the click: the same 961 MB file from archive.org in Chrome alone, and in Chrome with Byterush after its New download window. Byterush is done after 13.3 seconds; Chrome alone takes 3 minutes 41 seconds.">
+    <img src="docs/media/demo.gif" width="860" alt="Two real screen recordings side by side, timed from the click: the same 961 MB file from archive.org in Chrome alone, and in Chrome with Byterush after its New download window. Byterush is done after 17.2 seconds; Chrome alone takes 13 minutes 2 seconds.">
   </a>
   <br>
-  <sub>▶ <a href="https://zecod.github.io/byterush/#demo">Watch the 30-second demo</a>: the click, the New download window, then Chrome alone against Chrome with Byterush · also on 10.7 GB: <a href="#10-gb-screen-recorded">9.1× faster</a></sub>
+  <sub>▶ <a href="https://zecod.github.io/byterush/#demo">Watch the demo</a>: the click, the New download window, then Chrome alone against Chrome with Byterush · also on 10.7 GB: <a href="#10-gb-screen-recorded">10.4× faster</a></sub>
 </p>
 
 ## Why Byterush
 
 A browser downloads a file over **one** connection. Many servers, mirrors and CDNs cap how fast a single connection may go, and the further away a server is, the slower one TCP connection runs however fast your line is. Byterush asks for different byte ranges of the same file over many connections at once and writes each one straight into place, so together they use the bandwidth you pay for.
 
-- **Much faster on real servers.** A 961 MB file from archive.org took **6 min 54 s** on one connection and **13.5 s** with Byterush: **30× faster**. A 10.7 GB file took **9 min 4 s** in Chrome and **59.5 s** with Byterush. A 3.6 GB file took **33 s**; one connection was still at 97% after 32 minutes when the server dropped it. [Benchmarks ↓](#benchmarks)
+- **Much faster on real servers.** A 961 MB file from archive.org took **6 min 54 s** on one connection and **13.5 s** with Byterush: **30× faster**. A 10.7 GB file took **9 min 34 s** in Chrome and **55 s** with Byterush. A 3.6 GB file took **33 s**; one connection was still at 97% after 32 minutes when the server dropped it. [Benchmarks ↓](#benchmarks)
 - **Nothing is lost.** Progress is synced to disk every few seconds; after a crash, a power cut or a reboot, downloads continue from where they were. An expired link? Start the download again in the browser and the same download carries on.
 - **Your browser's downloads, caught.** The Chrome / Edge extension hands every download over with the browser's cookies, so sites that need a login or a bot check still work. A **New download** window pops up over the browser, like IDM's: name, size, folder, the room left on that drive, then start, later or cancel. If Byterush can't get the very same file, the browser simply keeps it.
 - **Free and private.** MIT licensed, no account, no telemetry. The browser bridge only listens on `127.0.0.1`.
@@ -49,7 +49,7 @@ The same file, the same machine, the same evening: one connection (curl, which d
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/benchmark-dark.svg">
-  <img src="docs/media/benchmark-light.svg" width="860" alt="Bar chart of download times. 961 MB from archive.org: 6 min 54 s on one connection, 13.5 s with Byterush and 32 connections (30.7 times faster). 3.6 GB from archive.org: one connection reset by the server after 32 min 13 s at 97%, Byterush 32.7 s (at least 59 times faster). 62 MB from archive.org: 48.9 s against 6.0 s (8.2 times). 1 GB from Hetzner: 28.9 s against 6.0 s with 16 connections (4.8 times). 10.7 GB from Hetzner Helsinki: Chrome 9 min 4 s, the Byterush app 59.5 s (9.1 times). 10.7 GB from Hetzner Falkenstein: Chrome 4 min 59 s, the Byterush app 54.9 s (5.4 times).">
+  <img src="docs/media/benchmark-light.svg" width="860" alt="Bar chart of download times. 961 MB from archive.org: 6 min 54 s on one connection, 13.5 s with Byterush and 32 connections (30.7 times faster). 3.6 GB from archive.org: one connection reset by the server after 32 min 13 s at 97%, Byterush 32.7 s (at least 59 times faster). 62 MB from archive.org: 48.9 s against 6.0 s (8.2 times). 1 GB from Hetzner: 28.9 s against 6.0 s with 16 connections (4.8 times). 10.7 GB from Hetzner Helsinki: Chrome 9 min 34 s, the Byterush app 55.1 s (10.4 times). 10.7 GB from Hetzner Falkenstein: Chrome 5 min 37 s, the Byterush app 50.1 s (6.7 times).">
 </picture>
 
 | File | Server | 1 connection | Byterush 8 | Byterush 16 | Byterush 32 | Best |
@@ -58,11 +58,11 @@ The same file, the same machine, the same evening: one connection (curl, which d
 | 3.6 GB archive¹ | archive.org | > 32 min 13 s | — | — | **32.7 s** | **≥ 59×** |
 | 62 MB video | archive.org | 48.9 s | 10.6 s | 8.6 s | **6.0 s** | **8.2×** |
 | 1 GB test file¹ | Hetzner Nuremberg | 28.9 s | — | **6.0 s** | 6.5 s | **4.8×** |
-| 10.7 GB test file² | Hetzner Helsinki | 9 min 04 s | — | **59.5 s** | — | **9.1×** |
-| 10.7 GB test file² | Hetzner Falkenstein | 4 min 59 s | — | **54.9 s** | — | **5.4×** |
+| 10.7 GB test file² | Hetzner Helsinki | 9 min 34 s | — | **55.1 s** | — | **10.4×** |
+| 10.7 GB test file² | Hetzner Falkenstein | 5 min 37 s | — | **50.1 s** | — | **6.7×** |
 
 ¹ One run per setting. The 3.6 GB file's single connection never finished: the server reset it after 32 min 13 s with 97% received, so that time and the speed-up are lower bounds.<br>
-² Chrome against the Byterush app, screen-recorded on 24 Oct 2026 (below); one run each, both timed from the click, so Byterush's time includes about 4 s in its New download window. It downloaded at the VM's disk speed (190–210 MB/s): with a faster disk the gap is wider.
+² Chrome against the Byterush app, screen-recorded on 24 Oct 2026 (below); one run each, both timed from the click, so Byterush's time includes about 4 s in its New download window. It downloaded at the VM's disk speed (210–230 MB/s): with a faster disk the gap is wider.
 
 **What to expect.** The gain is largest where a server limits each connection (archive.org, many mirrors and file hosts) or sits far away. A server that doesn't limit connections still gains on big files (4.8× above), while small files gain less because the per-request round trips weigh more: 100 MB files from Hetzner gained 1.4–1.5×. When one connection already fills your line (a fast CDN next door), nothing can beat your own bandwidth and times come out the same.
 
@@ -72,11 +72,11 @@ Many small files are fast too: 500 files of 48 KB finish in **0.36 s** with thre
 
 ### 10 GB, screen-recorded
 
-Hetzner's 10.7 GB test file, clicked in Chrome twice, one take right after the other: once on its own, once with the extension handing it to the Byterush app (16 connections). From Helsinki, one connection managed about 20 MB/s; Byterush finished in **59.5 s** against Chrome's **9 min 4 s**. From Falkenstein, closer, Chrome took 4 min 59 s and Byterush 54.9 s. Byterush was writing as fast as the VM's disk allowed both times.
+Hetzner's 10.7 GB test file, clicked in Chrome twice, one take right after the other: once on its own, once with the extension handing it to the Byterush app (16 connections). From Helsinki, one connection managed about 19 MB/s; Byterush finished in **55.1 s** against Chrome's **9 min 34 s**. From Falkenstein, closer, Chrome took 5 min 37 s and Byterush 50.1 s. Byterush was writing as fast as the VM's disk allowed both times.
 
 <p align="center">
   <a href="https://zecod.github.io/byterush/#demo">
-    <img src="docs/media/demo-10gb-helsinki.gif" width="860" alt="Two real screen recordings side by side: the same 10.7 GB file from Hetzner Helsinki in Chrome alone and in Chrome with Byterush. Byterush's window shows 16 ranges filling at about 190 MB/s and is done after 59.5 seconds; Chrome's side then fast-forwards until it is done after 9 minutes 4 seconds.">
+    <img src="docs/media/demo-10gb-helsinki.gif" width="860" alt="Two real screen recordings side by side: the same 10.7 GB file from Hetzner Helsinki in Chrome alone and in Chrome with Byterush. Byterush's window shows 16 ranges filling at about 210 MB/s and is done after 55 seconds; Chrome's side then fast-forwards until it is done after 9 minutes 34 seconds.">
   </a>
   <br>
   <sub>▶ Both 10 GB races in full, with the click and the New download window, on the <a href="https://zecod.github.io/byterush/#demo">website</a></sub>
