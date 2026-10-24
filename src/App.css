@@ -1525,37 +1525,6 @@ nav {
   font-size: var(--fs-xs);
 }
 
-.steps {
-  margin: 0;
-  padding-left: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: var(--fs-xs);
-  color: var(--text);
-}
-
-.steps code {
-  color: var(--text-strong);
-  background: var(--bg-weak);
-  border: 1px solid var(--border-weak);
-  border-radius: 3px;
-  padding: 0 4px;
-}
-
-.steps b {
-  color: var(--text-strong);
-  font-weight: 500;
-}
-
-.btn.inline {
-  height: 22px;
-  padding: 0 8px;
-  gap: 5px;
-  font-size: var(--fs-xs);
-  vertical-align: middle;
-}
-
 /* ---------- errors ---------- */
 .error-boundary {
   display: flex;
@@ -1727,4 +1696,148 @@ nav {
 
 .confirm-actions .check {
   font-size: var(--fs-xs);
+}
+
+/* ---------- browser extension setup ---------- */
+.setup {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.setup-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-weak);
+  border-radius: var(--radius);
+  background: var(--bg-weak);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.setup-status b {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.setup-status.ok {
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+  background: color-mix(in srgb, var(--ok) 9%, var(--bg));
+}
+
+.setup-status.ok svg {
+  color: var(--ok);
+}
+
+.setup-steps {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.setup-steps li::marker {
+  color: var(--text-weak);
+  font-size: var(--fs-xs);
+}
+
+.step-title {
+  color: var(--text-strong);
+  margin-bottom: 6px;
+}
+
+.step-title b {
+  font-weight: 600;
+}
+
+.setup-steps .hint {
+  line-height: 1.6;
+}
+
+.setup-steps .hint b {
+  color: var(--text-strong);
+  font-weight: 500;
+}
+
+.setup-browsers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.setup-folder {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+  margin-bottom: 6px;
+}
+
+.setup-folder code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 6px 10px;
+  border: 1px solid var(--border-weak);
+  border-radius: var(--radius);
+  background: var(--bg-weak);
+  color: var(--text-strong);
+  font-size: var(--fs-xs);
+}
+
+/* the suggestion to set up the extension, above the list */
+.setup-hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 16px 0;
+  padding: 10px 12px 10px 14px;
+  border: 1px solid var(--border-weak);
+  border-radius: var(--radius);
+  background: var(--interactive-weaker);
+  font-size: var(--fs-xs);
+  color: var(--text);
+}
+
+.setup-hint b {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.setup-hint .spacer {
+  flex: 1;
+}
+
+/* "leave downloads smaller than [1] [GB] to the browser" */
+.check-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text);
+}
+
+.check-line input.small-number,
+.check-line select {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border-weak);
+  border-radius: var(--radius);
+  background: var(--bg-weak);
+  color: var(--text-strong);
+  outline: none;
+}
+
+.check-line input.small-number {
+  width: 72px;
+}
+
+.check-line input:disabled,
+.check-line select:disabled {
+  opacity: 0.5;
 }
