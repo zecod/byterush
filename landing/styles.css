@@ -785,3 +785,5 @@ details[open] .plus::after{transform:rotate(0)}
   .su-status .su-light{animation:none}
 }
 .block .ext-actions .button-ghost .button-meta{border-left-color:var(--border)}
+.demo-pick{margin-top:24px}
+.demo-pick + .player{margin-top:16px}

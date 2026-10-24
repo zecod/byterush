@@ -128,7 +128,12 @@
         <section class="block" id="demo" aria-labelledby="demo-title">
           <p class="kicker"><span aria-hidden="true">[*]</span> 01 · in action</p>
           <h2 id="demo-title">Chrome, then Chrome with Byterush</h2>
-          <p class="lead">The same 961&nbsp;MB file from archive.org, clicked in Chrome twice: once on its own, once with Byterush taking it over. Two real screen recordings, timed from the click.</p>
+          <p class="lead">The same file clicked in Chrome twice: once on its own, once with Byterush taking it over. Two real screen recordings, timed from the click.</p>
+          <div class="seg demo-pick" role="group" aria-label="Demo" data-demo-seg hidden>
+            <button type="button" aria-pressed="true" data-demo="demo">961&nbsp;MB · archive.org</button>
+            <button type="button" aria-pressed="false" data-demo="demo-10gb-helsinki">10.7&nbsp;GB · Helsinki</button>
+            <button type="button" aria-pressed="false" data-demo="demo-10gb-falkenstein">10.7&nbsp;GB · Falkenstein</button>
+          </div>
           <figure class="player" data-player>
             <div class="player-frame">
               <video class="player-video" controls playsinline preload="none" poster="assets/video/demo.jpg" width="1920" height="1080" aria-label="Chrome alone against Chrome with Byterush, downloading the same 961 MB file" data-player-video>

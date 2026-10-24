@@ -16,7 +16,7 @@ Pushing to `main` publishes it to GitHub Pages through `.github/workflows/pages.
 
 ## Media
 
-- `assets/video/demo.{mp4,webm}` and its poster `assets/video/demo.jpg`: Chrome alone against Chrome with Byterush on the same file, played inline. Made in [`../video`](../video/README.md) from two real screen recordings; `npm run publish` there writes these files. H.264, with VP9 for browsers without H.264 (some open-source Chromium builds). No video bytes load until someone presses play; if a file is missing the player says so.
+- `assets/video/demo.{mp4,webm}` and its poster `assets/video/demo.jpg`: Chrome alone against Chrome with Byterush on the same 961 MB file, played inline. `demo-10gb-helsinki` and `demo-10gb-falkenstein` (same three files each) are the 10.7 GB races; buttons above the player switch between them. Made in [`../video`](../video/README.md) from two real screen recordings; `npm run publish` there writes these files. H.264, with VP9 for browsers without H.264 (some open-source Chromium builds). No video bytes load until someone presses play; if a file is missing the player says so.
 - `assets/screens/app-dark.webp` and `assets/screens/app-light.webp`: the app window, 2480×1560.
 
 Everything else on the page is drawn with HTML, CSS and inline SVG.
