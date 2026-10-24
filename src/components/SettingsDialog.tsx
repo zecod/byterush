@@ -126,6 +126,10 @@ export function SettingsDialog({ settings, onSave, onClose }: Props) {
 
         <h3>03 · browser</h3>
         <BrowserSection enabled={s.browser_integration} onChange={(v) => set("browser_integration", v)} />
+        <label className="check">
+          <input type="checkbox" checked={s.ask_before_download} onChange={(e) => set("ask_before_download", e.target.checked)} />
+          <span>ask where to save each browser download (a "new download" window, like IDM's)</span>
+        </label>
 
         <h3>04 · behaviour</h3>
         <label className="check">

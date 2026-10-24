@@ -661,6 +661,9 @@ nav {
 .status-queued {
   --fill: var(--text-weak);
 }
+.status-waiting {
+  --fill: var(--warn);
+}
 
 .status-downloading .progress-fill {
   background: repeating-linear-gradient(90deg, var(--fill) 0 5px, transparent 5px 7px),
@@ -1567,4 +1570,137 @@ nav {
 .finishing-bar.stalled div {
   animation: none;
   filter: grayscale(0.7);
+}
+
+/* "New download" window: a browser hand-over waiting for the user's answer */
+.confirm-window {
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 22px 18px;
+}
+
+.confirm-window.loading {
+  align-items: center;
+  justify-content: center;
+  color: var(--icon);
+}
+
+.confirm-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-xs);
+  color: var(--text-weak);
+  text-transform: lowercase;
+}
+
+.confirm-head > span:first-of-type {
+  color: var(--text-strong);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.confirm-from {
+  margin-left: auto;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.confirm-file {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border-weak);
+  border-radius: var(--radius);
+  background: var(--bg-weak);
+}
+
+.confirm-file .file-icon {
+  width: 42px;
+  height: 42px;
+}
+
+.confirm-file-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.confirm-file .name-input {
+  font-size: var(--fs-md);
+}
+
+.confirm-size {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.disk {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.disk-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.disk-used {
+  background: var(--text-weaker);
+}
+
+.disk-file {
+  background: var(--accent);
+  min-width: 2px;
+}
+
+.disk.full .disk-file {
+  background: var(--err);
+}
+
+.disk-text {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--fs-xs);
+  color: var(--text-weak);
+  font-variant-numeric: tabular-nums;
+}
+
+.key-file {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 1px;
+  background: var(--accent);
+  vertical-align: 0;
+}
+
+.confirm-error {
+  margin: 0;
+  font-size: var(--fs-xs);
+}
+
+.confirm-actions {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.confirm-actions .check {
+  font-size: var(--fs-xs);
 }

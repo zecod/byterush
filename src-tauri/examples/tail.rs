@@ -23,6 +23,7 @@ async fn main() {
             size: None,
             start: true,
             headers: Vec::new(),
+            confirm: false,
         })
         .await
         .expect("add");

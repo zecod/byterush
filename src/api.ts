@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
-export type Status = "queued" | "connecting" | "downloading" | "finishing" | "paused" | "completed" | "error";
+/** "waiting": handed over by the browser, on hold until the user answers its "New download" window. */
+export type Status = "queued" | "connecting" | "waiting" | "downloading" | "finishing" | "paused" | "completed" | "error";
 export type Category = "general" | "compressed" | "documents" | "music" | "programs" | "video";
 
 export interface Segment {
@@ -47,6 +48,8 @@ export interface Settings {
   /** Empty = the built-in browser user-agent. */
   user_agent: string;
   resume_on_startup: boolean;
+  /** Ask where to save a browser download, in the "New download" window, before it goes on. */
+  ask_before_download: boolean;
 }
 
 export interface ProbeInfo {
@@ -67,6 +70,20 @@ export interface AddRequest {
   connections?: number;
   size?: number | null;
   start: boolean;
+}
+
+/** The answer from a "New download" window; empty fields keep what the download has. */
+export interface Confirmation {
+  file_name?: string;
+  dir?: string;
+  connections?: number;
+  /** Start now; otherwise it stays paused for later. */
+  start: boolean;
+}
+
+export interface DiskSpace {
+  free: number;
+  total: number;
 }
 
 export interface BridgeStatus {
@@ -98,11 +115,16 @@ export const api = {
   reveal: (id: string) => invoke<void>("reveal_download", { id }),
   bridgeStatus: () => invoke<BridgeStatus>("bridge_status"),
   openExtensionFolder: () => invoke<string>("open_extension_folder"),
+  /** Returns the file name the download got (" (1)" added when the folder has that name). */
+  confirm: (id: string, choice: Confirmation) => invoke<string>("confirm_download", { id, choice }),
+  diskSpace: (dir: string) => invoke<DiskSpace | null>("disk_space", { dir }),
 };
 
 export const isActive = (s: Status) => s === "downloading" || s === "connecting";
 /** Busy in any way, including the final rebuild/move (which can't be paused). */
 export const isWorking = (s: Status) => isActive(s) || s === "finishing";
+/** Not started yet: in the queue, or waiting for the user's answer. */
+export const isPending = (s: Status) => s === "queued" || s === "waiting";
 
 export function formatBytes(n: number | null | undefined): string {
   if (n == null) return "Unknown";
@@ -145,6 +167,7 @@ export function formatDate(ms: number): string {
 export const statusLabel: Record<Status, string> = {
   queued: "queued",
   connecting: "connecting",
+  waiting: "waiting for you",
   downloading: "downloading",
   finishing: "finishing",
   paused: "paused",

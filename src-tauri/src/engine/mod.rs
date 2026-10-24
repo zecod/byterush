@@ -94,6 +94,8 @@ pub(crate) struct Runtime {
     pub request_latency: f64,
     /// Segments as of the last sync of the part file (see `Job::stored`).
     pub persisted: Option<Vec<Segment>>,
+    /// Set while a download waits for the user's answer (`Status::Waiting`); `confirm` wakes it.
+    pub confirm: Option<Arc<tokio::sync::Notify>>,
 }
 
 /// Wakes the thread that writes the state file.
@@ -156,6 +158,7 @@ struct Prepared {
     connections: Option<u8>,
     start: bool,
     headers: Vec<(String, String)>,
+    confirm: bool,
 }
 
 /// The address a download had before the browser handed over a fresh one (see `Manager::adopt`).
@@ -206,6 +209,10 @@ impl Manager {
                 // running when the app closed (or crashed): carry on, unless the user starts them by hand
                 if matches!(rec.status, Status::Queued | Status::Connecting | Status::Downloading | Status::Finishing) {
                     rec.status = if resume { Status::Queued } else { Status::Paused };
+                }
+                // never confirmed: it waits for the user, not for the next start
+                if rec.status == Status::Waiting {
+                    rec.status = Status::Paused;
                 }
                 Arc::new(Job::new(rec))
             })
@@ -346,6 +353,7 @@ impl Manager {
             connections: req.connections,
             start: req.start,
             headers: req.headers.into_iter().filter(|(k, _)| download::forwardable(k)).collect(),
+            confirm: req.confirm,
         })
     }
 
@@ -485,6 +493,39 @@ impl Manager {
         self.inner.state.lock().unwrap().settings.browser_integration
     }
 
+    /// Apply the user's answer to a download waiting in the "New download" window: its name,
+    /// folder and connections, then start it or keep it paused for later. Returns the file name it
+    /// got, which gains a " (1)" when the folder already has that name.
+    pub fn confirm(&self, id: &str, choice: Confirmation) -> Result<String, String> {
+        let job = self.inner.find(&[id.to_string()]).pop().ok_or("the download is gone")?;
+        let hold = job.rt.lock().unwrap().confirm.take().ok_or("the download is not waiting for an answer")?;
+        let file_name = {
+            let st = self.inner.state.lock().unwrap();
+            let mut reserved = reserved_paths(&st);
+            let mut r = job.rec.lock().unwrap();
+            reserved.remove(&PathBuf::from(&r.dir).join(&r.file_name));
+            let name = choice.file_name.as_deref().map(str::trim).filter(|n| !n.is_empty()).map(naming::sanitize);
+            let dir = choice.dir.as_deref().map(str::trim).filter(|d| !d.is_empty()).map(PathBuf::from);
+            let dir = dir.unwrap_or_else(|| PathBuf::from(&r.dir));
+            let path = naming::unique_path(&dir, name.as_deref().unwrap_or(&r.file_name), &reserved);
+            r.file_name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| r.file_name.clone());
+            r.dir = dir.to_string_lossy().into_owned();
+            r.category = naming::category_for(&r.file_name);
+            if let Some(n) = choice.connections {
+                r.connections = n.clamp(1, 32);
+            }
+            r.file_name.clone()
+        };
+        if choice.start {
+            hold.notify_one();
+            // paused from the main window in the meantime: it goes now
+            self.resume(&[id.to_string()]);
+        } else {
+            self.pause(&[id.to_string()]);
+        }
+        Ok(file_name)
+    }
+
     pub fn pause(&self, ids: &[String]) {
         for job in self.inner.find(ids) {
             let token = job.rt.lock().unwrap().cancel.clone();
@@ -493,7 +534,7 @@ impl Manager {
             }
             // show the pause right away; the connections wind down in the background
             let mut r = job.rec.lock().unwrap();
-            if matches!(r.status, Status::Queued | Status::Connecting | Status::Downloading) {
+            if matches!(r.status, Status::Queued | Status::Connecting | Status::Waiting | Status::Downloading) {
                 r.status = Status::Paused;
             }
         }
@@ -709,7 +750,11 @@ fn insert(st: &mut State, reserved: &mut HashSet<PathBuf>, p: Prepared, verdict:
         last_modified: None,
     };
     let job = Job::new(rec);
-    job.rt.lock().unwrap().verdict = verdict;
+    {
+        let mut rt = job.rt.lock().unwrap();
+        rt.verdict = verdict;
+        rt.confirm = p.confirm.then(|| Arc::new(tokio::sync::Notify::new()));
+    }
     st.jobs.push(Arc::new(job));
     id
 }
@@ -782,6 +827,14 @@ fn spawn_saver(inner: Weak<Inner>, saver: Arc<Saver>) {
             }
         }
     });
+}
+
+/// Free and total space of the drive a folder is on. The folder need not exist yet: its nearest
+/// existing parent is measured.
+pub fn disk_space(dir: &Path) -> Option<DiskSpace> {
+    let existing = dir.ancestors().find(|d| d.is_dir())?;
+    let stats = fs4::statvfs(existing).ok()?;
+    Some(DiskSpace { free: stats.available_space(), total: stats.total_space() })
 }
 
 fn default_dir(settings: &Settings, category: Category) -> PathBuf {
@@ -895,6 +948,8 @@ impl Inner {
                     // paused (already shows it), resumed while the old connections were closing,
                     // or a browser hand-over that was turned down (`restore`)
                     _ if matches!(r.status, Status::Paused | Status::Queued | Status::Error) => {}
+                    // never confirmed: it waits for the user, not for the next start
+                    _ if r.status == Status::Waiting => r.status = Status::Paused,
                     // stopped because the app is quitting: continue on the next start
                     _ if self.closing.load(Ordering::SeqCst) => r.status = Status::Queued,
                     _ => r.status = Status::Paused,

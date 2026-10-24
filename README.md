@@ -38,7 +38,7 @@ A browser downloads a file over **one** connection. Many servers, mirrors and CD
 
 - **Much faster on real servers.** A 961 MB file from archive.org took **6 min 54 s** on one connection and **13.5 s** with Byterush: **30× faster**. A 3.6 GB file took **33 s**; one connection was still at 97% after 32 minutes when the server dropped it. [Benchmarks ↓](#benchmarks)
 - **Nothing is lost.** Progress is synced to disk every few seconds; after a crash, a power cut or a reboot, downloads continue from where they were. An expired link? Start the download again in the browser and the same download carries on.
-- **Your browser's downloads, caught.** The Chrome / Edge extension hands every download over with the browser's cookies, so sites that need a login or a bot check still work. If Byterush can't get the very same file, the browser simply keeps it.
+- **Your browser's downloads, caught.** The Chrome / Edge extension hands every download over with the browser's cookies, so sites that need a login or a bot check still work. A **New download** window pops up over the browser, like IDM's: name, size, folder, the room left on that drive, then start, later or cancel. If Byterush can't get the very same file, the browser simply keeps it.
 - **Free and private.** MIT licensed, no account, no telemetry. The browser bridge only listens on `127.0.0.1`.
 
 ## Benchmarks
@@ -126,6 +126,8 @@ The extension in [`extension/`](extension) hands browser downloads to the app; i
 3. Click **Load unpacked** and pick that folder.
 
 How it decides: while Chrome is choosing the file name, the extension sends the download to the app together with the exact request headers Chrome used. The app opens its first connection and compares the answer with what the browser was getting (a web page instead of the file means a login or bot check; a different size means a different file). Only when it's the same file is Chrome's copy cancelled; otherwise Chrome carries on as if nothing happened. If you start a download again whose link had expired, the paused download in Byterush continues from the new link instead of starting over.
+
+Then the **New download** window opens on top of the browser: the file's name and size, the folder it will be saved in (change it with the folder button), how much room is left on that drive, and the number of connections. **Start download** (or Enter) goes, **later** keeps it paused in the list, **cancel** drops it. Until you answer, the download waits with its first connection open, so a link that works only once still works; closing the window keeps the download for later. To start browser downloads without asking, untick *ask for every browser download* in the window or in **Settings → 03 · browser**.
 
 It needs these permissions: `downloads` (to see and hand over downloads), `webRequest` + `cookies` (to replay your session for the same URL), `contextMenus`, `storage`, and access to all sites (downloads can come from anywhere). It talks only to the app on `127.0.0.1:51723`, and the app accepts calls from this extension only.
 
