@@ -40,7 +40,11 @@ async fn app(out: PathBuf) {
     let status = bridge::start(
         manager.clone(),
         &tokio::runtime::Handle::current(),
-        Arc::new(|id: &str, source: &str| println!("CAPTURED {source} {id}")),
+        // the automated test has nobody to answer a "New download" window
+        bridge::Hooks {
+            on_captured: Arc::new(|id: &str, source: &str, _waiting: bool| println!("CAPTURED {source} {id}")),
+            can_ask: false,
+        },
     );
 
     for _ in 0..200 {

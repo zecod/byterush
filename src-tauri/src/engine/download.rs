@@ -247,6 +247,24 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
             "the site answered with a web page instead of the file (a login, captcha or \"download will start\" page): start the download in the browser"
         );
     }
+    // a hand-over waits here for the user's answer in the "New download" window, which may change
+    // its name, folder and connections. Its first response stays open meanwhile, so a link that
+    // works only once still works when the user says go.
+    let hold = job.rt.lock().unwrap().confirm.clone();
+    if let Some(hold) = hold {
+        {
+            // shown in the window: how big it is and whether it can go over several connections
+            let mut r = job.rec.lock().unwrap();
+            r.status = Status::Waiting;
+            r.size = opened.size.or(r.size);
+            r.resumable = opened.resumable;
+        }
+        tokio::select! {
+            _ = hold.notified() => {}
+            _ = cancel.cancelled() => return Ok(()),
+        }
+        job.rec.lock().unwrap().status = Status::Connecting;
+    }
     let FirstResponse { size: probed_size, resumable, body: mut first, body_idx, continues, validators, referer, .. } = opened;
 
     let (target, part, fresh, size, connections, body_idx) = {
