@@ -25,7 +25,7 @@
         </a>
         <nav class="nav" id="nav" aria-label="Main">
           <ul>
-            <li><a href="#app">App</a></li>
+            <li><a href="#demo">Demo</a></li>
             <li><a href="#speed">Speed</a></li>
             <li><a href="#features">Features</a></li>
             <li><a href="#extension">Extension</a></li>
@@ -124,13 +124,30 @@
           <figcaption class="band-cap">Fig 1. One file, eight connections. The bar at the bottom is the file itself: each range belongs to a connection, and a connection that finishes takes half of the biggest range left.</figcaption>
         </figure>
 
-        <!-- 01 the app -->
-        <section class="block" id="app" aria-labelledby="app-title">
-          <p class="kicker"><span aria-hidden="true">[*]</span> 01 · the app</p>
-          <h2 id="app-title">Light and dark</h2>
-          <p class="lead">Byterush follows your system theme. The same window, both ways.</p>
+        <!-- 01 demo -->
+        <section class="block" id="demo" aria-labelledby="demo-title">
+          <p class="kicker"><span aria-hidden="true">[*]</span> 01 · in action</p>
+          <h2 id="demo-title">Chrome, then Chrome with Byterush</h2>
+          <p class="lead">The same 961&nbsp;MB file from archive.org, clicked in Chrome twice: once on its own, once with Byterush taking it over. Two real screen recordings, timed from the click.</p>
+          <figure class="player" data-player>
+            <div class="player-frame">
+              <video class="player-video" controls playsinline preload="none" poster="assets/video/demo.jpg" width="1920" height="1080" aria-label="Chrome alone against Chrome with Byterush, downloading the same 961 MB file" data-player-video>
+                <source src="assets/video/demo.mp4" type='video/mp4; codecs="avc1.640028"' />
+                <source src="assets/video/demo.webm" type='video/webm; codecs="vp9"' />
+                <a href="assets/video/demo.mp4">Download the demo video (MP4)</a>
+              </video>
+              <button class="player-play" type="button" data-player-play hidden><span class="play-big" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4.5 2.8v10.4l8.8-5.2z"/></svg></span><span class="sr-only">Play the demo</span></button>
+              <p class="player-msg" data-player-msg hidden>The demo video can't be played here. Try another browser.</p>
+            </div>
+            <figcaption class="fig">Fig. the click, Byterush's New download window, then both downloads side by side · the video only loads when you press play</figcaption>
+          </figure>
+
           <div class="shots" data-shots>
             <div class="shots-head">
+              <div>
+                <h3>Light and dark</h3>
+                <p>Byterush follows your system theme. The same window, both ways.</p>
+              </div>
               <div class="seg" role="group" aria-label="Screenshot theme" data-shot-seg hidden>
                 <button type="button" aria-pressed="true" data-shot="dark">Dark</button>
                 <button type="button" aria-pressed="false" data-shot="light">Light</button>

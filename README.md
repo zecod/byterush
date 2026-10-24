@@ -27,9 +27,11 @@
 </p>
 
 <p align="center">
-  <a href="https://zecod.github.io/byterush/#speed">
-    <img src="docs/media/demo.gif" width="860" alt="A race replayed from a real recording: the same 961 MB file from archive.org over one connection, the way a browser downloads, and with Byterush over 32 connections. Byterush finishes in 14.2 seconds while one connection is at 16 percent; one connection takes 6 minutes 52 seconds, 29.1 times longer.">
+  <a href="https://zecod.github.io/byterush/#demo">
+    <img src="docs/media/demo.gif" width="860" alt="Two real screen recordings side by side, timed from the click: the same 961 MB file from archive.org in Chrome alone, and in Chrome with Byterush after its New download window. Byterush is done after 13.3 seconds; Chrome alone takes 3 minutes 41 seconds.">
   </a>
+  <br>
+  <sub>▶ <a href="https://zecod.github.io/byterush/#demo">Watch the 30-second demo</a>: the click, the New download window, then Chrome alone against Chrome with Byterush</sub>
 </p>
 
 ## Why Byterush
@@ -151,7 +153,7 @@ src-tauri/src/bridge.rs local HTTP bridge for the extension (127.0.0.1:51723)
 src/                    React interface
 extension/              Chrome / Edge extension
 landing/                website (GitHub Pages)
-video/                  intro and demo videos (Remotion), driven by recorded downloads
+video/                  the demo video (Remotion), cut from real screen recordings
 scripts/                benchmark, chart, extension end-to-end test, release helpers
 ```
 
@@ -204,7 +206,7 @@ npm run tauri build               # installers in src-tauri/target/release/bundl
 
 - `scripts/bench.sh <url> [runs]`: one connection against Byterush with 8, 16 and 32 connections.
 - `CHROME=/path/to/chromium node scripts/extension-e2e.mjs`: the extension in a real Chromium against the real bridge and engine.
-- `video/`: `npm ci && npm run dev` to edit the videos, `npm run publish` to render them for the site and this README. They replay downloads recorded with `cargo run --release --example record`; see [video/README.md](video/README.md).
+- `video/`: `npm ci && npm run dev` to edit the demo, `npm run publish` to render it for the site and this README; see [video/README.md](video/README.md).
 
 Releases are built by GitHub Actions for every platform when a `v*` tag is pushed: see [`docs/RELEASING.md`](docs/RELEASING.md).
 

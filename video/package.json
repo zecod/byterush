@@ -1,7 +1,7 @@
 {
   "name": "byterush-video",
   "version": "1.0.0",
-  "description": "The Byterush intro and demo videos, rendered with Remotion from recorded downloads",
+  "description": "The Byterush demo video, edited with Remotion from real screen recordings",
   "repository": {
     "type": "git",
     "url": "https://github.com/zecod/byterush.git",
@@ -13,11 +13,8 @@
   },
   "private": true,
   "dependencies": {
-    "@hugeicons/core-free-icons": "^4.3.5",
-    "@hugeicons/react": "^1.1.10",
     "@remotion/cli": "4.0.538",
     "@remotion/fonts": "4.0.538",
-    "@remotion/transitions": "4.0.538",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.538"

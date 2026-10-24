@@ -1,42 +1,28 @@
-# Byterush videos
+# Byterush demo video
 
-An intro (49 s), a one-minute demo, and the GIF at the top of the main README, which is cut from the intro. The videos are not on the website. They are written in React with [Remotion](https://www.remotion.dev/).
+The 30-second demo on the [website](https://zecod.github.io/byterush/#demo), and the GIF at the top of the main README: the same 961 MB file from archive.org clicked in Chrome alone, and in Chrome with Byterush (its New download window, then the download), side by side and timed from the click. It is edited with [Remotion](https://www.remotion.dev/) from two **real screen recordings**; nothing in it is drawn or replayed.
 
-Nothing in them is invented. Every progress bar, speed, connection and segment is replayed from a **recording of a real download** made with Byterush's own engine (`public/telemetry/*.json`), and the app window is drawn with the app's real components and stylesheet (`../src`), so the videos show what the app actually does.
+`src/Demo.tsx` is the edit:
 
-| Recording | What it is |
-|---|---|
-| `race-slow.json` | 961 MB from archive.org over one connection, the way a browser downloads |
-| `race-fast.json` | the same file with Byterush and 32 connections |
-| `demo.json` | the same file again, paused at 6 s and resumed at 9 s |
-| `handover.json` | 1 GB from Hetzner with 16 connections, the download "handed over by the browser" in the demo |
+1. full screen, real time: the click in Chrome, Byterush's New download window, *start download*;
+2. both recordings side by side from the same click, with clocks; once Byterush is done, Chrome's side runs 20× faster (labelled) until Chrome is done;
+3. the two times.
 
-## Preview
+`src/lib/takes.ts` holds the moments the recording script logged in each recording (the click, the window, *start download*, the file complete on disk), in seconds into the file. The clocks and the result come from them.
+
+## Record the takes
+
+The recordings go in `public/takes/` (not in git): `a.mp4` is Chrome alone, `b.mp4` Chrome with the Byterush extension and the app. They were made on a 1920×1080 virtual display (Xvfb, openbox) with the release build of the app and Chrome for Testing, the mouse driven by `xdotool` and the screen captured with `ffmpeg -f x11grab -draw_mouse 1`, one take right after the other on the same machine. In both, the browser window sits at x 440, y 40, 1040×1000; in take b, the app's window is behind it in the same spot and its settings say 32 connections. The script clicked the file on `https://archive.org/download/Sintel/`, logged the wallclock of each moment and read the first frame's wallclock from ffmpeg (`start:` in its log), which gives the offsets in `takes.ts`. New takes need new offsets there.
+
+## Preview and publish
 
 ```sh
 npm ci
-npm run dev        # Remotion Studio: Intro, Demo and the stills
+npm run dev        # Remotion Studio
+npm run publish    # renders it and writes landing/assets/video/demo.{mp4,webm,jpg} and docs/media/demo.gif
 ```
 
-## Record new downloads
-
-From the repository root, ten samples a second of progress, speed and every segment:
-
-```sh
-cargo run --release --manifest-path src-tauri/Cargo.toml --example record -- \
-  <url> <out_dir> <connections> video/public/telemetry/<name>.json [pause_s resume_s]
-```
-
-Then update `MEASURED` in `src/lib/data.ts`. Scene lengths follow the recordings, so the demo's duration adapts on its own.
-
-## Publish
-
-```sh
-npm run publish            # both videos
-npm run publish -- demo    # or only one: intro (which also makes the GIF) or demo
-```
-
-Renders the videos to `out/{intro,demo}.{mp4,webm,jpg}` (H.264, VP9 and a poster) and writes `docs/media/demo.gif`. It needs a system `ffmpeg` with libx264 and libvpx-vp9. `REMOTION_BROWSER` may point at a Chrome Headless Shell to render with.
+Publishing needs a system `ffmpeg` with libx264 and libvpx-vp9. `REMOTION_BROWSER` may point at a Chrome Headless Shell to render with.
 
 ## License
 

@@ -956,3 +956,26 @@ function applyDownloads(d, release) {
 
 // illustrations only move while they are on screen
 $$(".tile, .hero").forEach((node) => onVisible(node, (visible) => node.classList.toggle("off", !visible), 0));
+
+/* ---------- video: nothing is downloaded until someone presses play ---------- */
+
+{
+  const video = $("[data-player-video]");
+  const play = $("[data-player-play]");
+  const msg = $("[data-player-msg]");
+  const fail = () => (msg.hidden = false);
+  video.addEventListener("error", fail);
+  video.querySelectorAll("source").forEach((s) => s.addEventListener("error", fail));
+  play.hidden = false;
+  video.controls = false;
+  play.addEventListener("click", () => {
+    play.hidden = true;
+    video.controls = true;
+    video.play().catch(() => {});
+    video.focus();
+  });
+  video.addEventListener("play", () => {
+    play.hidden = true;
+    video.controls = true;
+  });
+}
