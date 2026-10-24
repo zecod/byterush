@@ -31,14 +31,14 @@
     <img src="docs/media/demo.gif" width="860" alt="Two real screen recordings side by side, timed from the click: the same 961 MB file from archive.org in Chrome alone, and in Chrome with Byterush after its New download window. Byterush is done after 13.3 seconds; Chrome alone takes 3 minutes 41 seconds.">
   </a>
   <br>
-  <sub>▶ <a href="https://zecod.github.io/byterush/#demo">Watch the 30-second demo</a>: the click, the New download window, then Chrome alone against Chrome with Byterush</sub>
+  <sub>▶ <a href="https://zecod.github.io/byterush/#demo">Watch the 30-second demo</a>: the click, the New download window, then Chrome alone against Chrome with Byterush · also on 10.7 GB: <a href="#10-gb-screen-recorded">9.1× faster</a></sub>
 </p>
 
 ## Why Byterush
 
 A browser downloads a file over **one** connection. Many servers, mirrors and CDNs cap how fast a single connection may go, and the further away a server is, the slower one TCP connection runs however fast your line is. Byterush asks for different byte ranges of the same file over many connections at once and writes each one straight into place, so together they use the bandwidth you pay for.
 
-- **Much faster on real servers.** A 961 MB file from archive.org took **6 min 54 s** on one connection and **13.5 s** with Byterush: **30× faster**. A 3.6 GB file took **33 s**; one connection was still at 97% after 32 minutes when the server dropped it. [Benchmarks ↓](#benchmarks)
+- **Much faster on real servers.** A 961 MB file from archive.org took **6 min 54 s** on one connection and **13.5 s** with Byterush: **30× faster**. A 10.7 GB file took **9 min 4 s** in Chrome and **59.5 s** with Byterush. A 3.6 GB file took **33 s**; one connection was still at 97% after 32 minutes when the server dropped it. [Benchmarks ↓](#benchmarks)
 - **Nothing is lost.** Progress is synced to disk every few seconds; after a crash, a power cut or a reboot, downloads continue from where they were. An expired link? Start the download again in the browser and the same download carries on.
 - **Your browser's downloads, caught.** The Chrome / Edge extension hands every download over with the browser's cookies, so sites that need a login or a bot check still work. A **New download** window pops up over the browser, like IDM's: name, size, folder, the room left on that drive, then start, later or cancel. If Byterush can't get the very same file, the browser simply keeps it.
 - **Free and private.** MIT licensed, no account, no telemetry. The browser bridge only listens on `127.0.0.1`.
@@ -49,7 +49,7 @@ The same file, the same machine, the same evening: one connection (curl, which d
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/benchmark-dark.svg">
-  <img src="docs/media/benchmark-light.svg" width="860" alt="Bar chart of download times. 961 MB from archive.org: 6 min 54 s on one connection, 13.5 s with Byterush and 32 connections (30.7 times faster). 3.6 GB from archive.org: one connection reset by the server after 32 min 13 s at 97%, Byterush 32.7 s (at least 59 times faster). 62 MB from archive.org: 48.9 s against 6.0 s (8.2 times). 1 GB from Hetzner: 28.9 s against 6.0 s with 16 connections (4.8 times).">
+  <img src="docs/media/benchmark-light.svg" width="860" alt="Bar chart of download times. 961 MB from archive.org: 6 min 54 s on one connection, 13.5 s with Byterush and 32 connections (30.7 times faster). 3.6 GB from archive.org: one connection reset by the server after 32 min 13 s at 97%, Byterush 32.7 s (at least 59 times faster). 62 MB from archive.org: 48.9 s against 6.0 s (8.2 times). 1 GB from Hetzner: 28.9 s against 6.0 s with 16 connections (4.8 times). 10.7 GB from Hetzner Helsinki: Chrome 9 min 4 s, the Byterush app 59.5 s (9.1 times). 10.7 GB from Hetzner Falkenstein: Chrome 4 min 59 s, the Byterush app 54.9 s (5.4 times).">
 </picture>
 
 | File | Server | 1 connection | Byterush 8 | Byterush 16 | Byterush 32 | Best |
@@ -58,14 +58,29 @@ The same file, the same machine, the same evening: one connection (curl, which d
 | 3.6 GB archive¹ | archive.org | > 32 min 13 s | — | — | **32.7 s** | **≥ 59×** |
 | 62 MB video | archive.org | 48.9 s | 10.6 s | 8.6 s | **6.0 s** | **8.2×** |
 | 1 GB test file¹ | Hetzner Nuremberg | 28.9 s | — | **6.0 s** | 6.5 s | **4.8×** |
+| 10.7 GB test file² | Hetzner Helsinki | 9 min 04 s | — | **59.5 s** | — | **9.1×** |
+| 10.7 GB test file² | Hetzner Falkenstein | 4 min 59 s | — | **54.9 s** | — | **5.4×** |
 
-¹ One run per setting. The 3.6 GB file's single connection never finished: the server reset it after 32 min 13 s with 97% received, so that time and the speed-up are lower bounds.
+¹ One run per setting. The 3.6 GB file's single connection never finished: the server reset it after 32 min 13 s with 97% received, so that time and the speed-up are lower bounds.<br>
+² Chrome against the Byterush app, screen-recorded on 24 Oct 2026 (below); one run each, both timed from the click, so Byterush's time includes about 4 s in its New download window. It downloaded at the VM's disk speed (190–210 MB/s): with a faster disk the gap is wider.
 
 **What to expect.** The gain is largest where a server limits each connection (archive.org, many mirrors and file hosts) or sits far away. A server that doesn't limit connections still gains on big files (4.8× above), while small files gain less because the per-request round trips weigh more: 100 MB files from Hetzner gained 1.4–1.5×. When one connection already fills your line (a fast CDN next door), nothing can beat your own bandwidth and times come out the same.
 
 Raw numbers: [`docs/benchmarks.json`](docs/benchmarks.json). Reproduce: `scripts/bench.sh <url> [runs]`, then `node scripts/bench-chart.mjs` redraws the chart. Measured on a Linux VM in a datacenter on 23 Oct 2026; your numbers depend on the server, the distance and your line.
 
 Many small files are fast too: 500 files of 48 KB finish in **0.36 s** with three downloads at a time (`examples/bench_many`, against a local server).
+
+### 10 GB, screen-recorded
+
+Hetzner's 10.7 GB test file, clicked in Chrome twice, one take right after the other: once on its own, once with the extension handing it to the Byterush app (16 connections). From Helsinki, one connection managed about 20 MB/s; Byterush finished in **59.5 s** against Chrome's **9 min 4 s**. From Falkenstein, closer, Chrome took 4 min 59 s and Byterush 54.9 s. Byterush was writing as fast as the VM's disk allowed both times.
+
+<p align="center">
+  <a href="https://zecod.github.io/byterush/#demo">
+    <img src="docs/media/demo-10gb-helsinki.gif" width="860" alt="Two real screen recordings side by side: the same 10.7 GB file from Hetzner Helsinki in Chrome alone and in Chrome with Byterush. Byterush's window shows 16 ranges filling at about 190 MB/s and is done after 59.5 seconds; Chrome's side then fast-forwards until it is done after 9 minutes 4 seconds.">
+  </a>
+  <br>
+  <sub>▶ Both 10 GB races in full, with the click and the New download window, on the <a href="https://zecod.github.io/byterush/#demo">website</a></sub>
+</p>
 
 ## Features
 
@@ -123,15 +138,21 @@ Every release lists SHA-256 checksums in `SHA256SUMS.txt`. Until code signing is
 
 The extension in [`extension/`](extension) hands browser downloads to the app; it ships inside the app and as `byterush-extension-<version>.zip` on every release.
 
-1. In Byterush, open **Settings → 03 · browser → open folder**.
-2. Open `chrome://extensions` (or `edge://extensions`) and turn on **Developer mode**.
-3. Click **Load unpacked** and pick that folder.
+1. In Byterush, open **Settings → 03 · browser → set up the extension…**. The guide shows the extension's folder with a copy button, opens the extensions page of each Chromium browser it finds (Chrome, Edge, Brave, Vivaldi, Opera, Chromium), and turns green once the extension checks in. Until then, the main window suggests it.
+2. Turn on **Developer mode**, click **Load unpacked** and pick that folder.
+3. Pin it, and to catch private windows too: **Details → Allow in Incognito**.
+
+The [setup page](https://zecod.github.io/byterush/setup.html) walks through the same steps for each browser, checks live that the extension is loaded and reaches the app, and lists why a download can stay in the browser.
 
 How it decides: while Chrome is choosing the file name, the extension sends the download to the app together with the exact request headers Chrome used. The app opens its first connection and compares the answer with what the browser was getting (a web page instead of the file means a login or bot check; a different size means a different file). Only when it's the same file is Chrome's copy cancelled; otherwise Chrome carries on as if nothing happened. If you start a download again whose link had expired, the paused download in Byterush continues from the new link instead of starting over.
 
 Then the **New download** window opens on top of the browser: the file's name and size, the folder it will be saved in (change it with the folder button), how much room is left on that drive, and the number of connections. **Start download** (or Enter) goes, **later** keeps it paused in the list, **cancel** drops it. Until you answer, the download waits with its first connection open, so a link that works only once still works; closing the window keeps the download for later. To start browser downloads without asking, untick *ask for every browser download* in the window or in **Settings → 03 · browser**.
 
-It needs these permissions: `downloads` (to see and hand over downloads), `webRequest` + `cookies` (to replay your session for the same URL), `contextMenus`, `storage`, and access to all sites (downloads can come from anywhere). It talks only to the app on `127.0.0.1:51723`, and the app accepts calls from this extension only.
+**Leave small files to the browser** (off by default): in **Settings → 03 · browser**, *leave downloads smaller than 1 GB to the browser* (any size, in MB or GB) keeps quick downloads in the browser and hands over only the big ones. The extension skips files whose size it already knows; the app checks the others on its first response. Links picked with right-click → *Download with Byterush* are always taken.
+
+When a download stays in the browser, you are told why: the extension's popup lists the last hand-overs with the reason, and the app shows a notice when it tried and couldn't (the server refused, a different file came back). A busy server (429, 502, 503, 504, or a dropped first connection) is asked again twice, after what it asks for in `Retry-After` up to three seconds, before the browser keeps the download.
+
+It needs these permissions: `downloads` (to see and hand over downloads), `webRequest` + `cookies` (to replay your session for the same URL), `contextMenus`, `storage`, `alarms` (to check in with the app every 5 minutes, so the setup guide knows it is installed), and access to all sites (downloads can come from anywhere). It talks only to the app on `127.0.0.1:51723`, and the app accepts calls from this extension only. The setup page can ask it one thing, whether it is installed and reaches the app (`externally_connectable`, limited to `zecod.github.io` and `localhost`).
 
 ## How it works
 

@@ -252,6 +252,9 @@ impl Manager {
             }
             settings.connections = settings.connections.clamp(1, 32);
             settings.max_active = settings.max_active.clamp(1, 20);
+            // the app keeps these; a settings dialog opened earlier must not turn them back
+            settings.extension_seen_ms = st.settings.extension_seen_ms;
+            settings.extension_browser = st.settings.extension_browser.clone();
             settings.user_agent = settings.user_agent.trim().to_string();
             if settings.effective_user_agent() != st.settings.effective_user_agent() {
                 st.client = build_client(&settings.effective_user_agent());
@@ -487,6 +490,22 @@ impl Manager {
         self.inner.changed();
         self.inner.pump();
         Ok(())
+    }
+
+    /// The browser extension checked in: remembered across restarts, for the setup guide. Saved
+    /// once a minute at most.
+    pub fn note_extension(&self, browser: &str) {
+        let now = now_ms();
+        {
+            let mut st = self.inner.state.lock().unwrap();
+            let s = &mut st.settings;
+            if s.extension_browser == browser && now.saturating_sub(s.extension_seen_ms) < 60_000 {
+                return;
+            }
+            s.extension_seen_ms = now;
+            s.extension_browser = browser.to_string();
+        }
+        self.inner.changed();
     }
 
     pub fn browser_integration(&self) -> bool {

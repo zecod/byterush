@@ -100,6 +100,15 @@ pub struct Settings {
     /// Ask where to save a download the browser hands over, in the "New download" window, before
     /// it goes on.
     pub ask_before_download: bool,
+    /// Leave downloads smaller than `small_file_limit_mb` to the browser (off by default).
+    pub leave_small_to_browser: bool,
+    pub small_file_limit_mb: u64,
+    /// When the browser extension last checked in (ms since the epoch, 0: never) and from which
+    /// browser. Kept by the app (`Manager::note_extension`), not by the settings dialog.
+    pub extension_seen_ms: u64,
+    pub extension_browser: String,
+    /// The suggestion to set up the browser extension was closed.
+    pub setup_hint_dismissed: bool,
 }
 
 impl Default for Settings {
@@ -118,11 +127,21 @@ impl Default for Settings {
             user_agent: String::new(),
             resume_on_startup: true,
             ask_before_download: true,
+            leave_small_to_browser: false,
+            small_file_limit_mb: 1024,
+            extension_seen_ms: 0,
+            extension_browser: String::new(),
+            setup_hint_dismissed: false,
         }
     }
 }
 
 impl Settings {
+    /// Browser downloads smaller than this stay in the browser; 0 when every size is taken over.
+    pub fn takeover_min_bytes(&self) -> u64 {
+        if self.leave_small_to_browser { self.small_file_limit_mb.saturating_mul(1024 * 1024) } else { 0 }
+    }
+
     /// The user-agent requests go out with when the browser didn't hand one over.
     pub fn effective_user_agent(&self) -> String {
         let custom = self.user_agent.trim();
