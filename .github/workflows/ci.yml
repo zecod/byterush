@@ -94,7 +94,6 @@ jobs:
         run: npx vite build
       - name: Landing page script parses
         run: node --check landing/main.js
-      # the videos draw the app with its own components, so a change to the UI can break them
       - name: Videos lint and type check
         working-directory: video
         run: |
