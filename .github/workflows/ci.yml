@@ -93,7 +93,8 @@ jobs:
       - name: Build
         run: npx vite build
       - name: Landing page script parses
-        run: node --check landing/main.js
+        run: |
+          for f in landing/*.js; do node --check "$f"; done
       - name: Videos lint and type check
         working-directory: video
         run: |

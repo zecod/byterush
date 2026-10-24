@@ -123,15 +123,21 @@ Every release lists SHA-256 checksums in `SHA256SUMS.txt`. Until code signing is
 
 The extension in [`extension/`](extension) hands browser downloads to the app; it ships inside the app and as `byterush-extension-<version>.zip` on every release.
 
-1. In Byterush, open **Settings → 03 · browser → open folder**.
-2. Open `chrome://extensions` (or `edge://extensions`) and turn on **Developer mode**.
-3. Click **Load unpacked** and pick that folder.
+1. In Byterush, open **Settings → 03 · browser → set up the extension…**. The guide shows the extension's folder with a copy button, opens the extensions page of each Chromium browser it finds (Chrome, Edge, Brave, Vivaldi, Opera, Chromium), and turns green once the extension checks in. Until then, the main window suggests it.
+2. Turn on **Developer mode**, click **Load unpacked** and pick that folder.
+3. Pin it, and to catch private windows too: **Details → Allow in Incognito**.
+
+The [setup page](https://zecod.github.io/byterush/setup.html) walks through the same steps for each browser, checks live that the extension is loaded and reaches the app, and lists why a download can stay in the browser.
 
 How it decides: while Chrome is choosing the file name, the extension sends the download to the app together with the exact request headers Chrome used. The app opens its first connection and compares the answer with what the browser was getting (a web page instead of the file means a login or bot check; a different size means a different file). Only when it's the same file is Chrome's copy cancelled; otherwise Chrome carries on as if nothing happened. If you start a download again whose link had expired, the paused download in Byterush continues from the new link instead of starting over.
 
 Then the **New download** window opens on top of the browser: the file's name and size, the folder it will be saved in (change it with the folder button), how much room is left on that drive, and the number of connections. **Start download** (or Enter) goes, **later** keeps it paused in the list, **cancel** drops it. Until you answer, the download waits with its first connection open, so a link that works only once still works; closing the window keeps the download for later. To start browser downloads without asking, untick *ask for every browser download* in the window or in **Settings → 03 · browser**.
 
-It needs these permissions: `downloads` (to see and hand over downloads), `webRequest` + `cookies` (to replay your session for the same URL), `contextMenus`, `storage`, and access to all sites (downloads can come from anywhere). It talks only to the app on `127.0.0.1:51723`, and the app accepts calls from this extension only.
+**Leave small files to the browser** (off by default): in **Settings → 03 · browser**, *leave downloads smaller than 1 GB to the browser* (any size, in MB or GB) keeps quick downloads in the browser and hands over only the big ones. The extension skips files whose size it already knows; the app checks the others on its first response. Links picked with right-click → *Download with Byterush* are always taken.
+
+When a download stays in the browser, you are told why: the extension's popup lists the last hand-overs with the reason, and the app shows a notice when it tried and couldn't (the server refused, a different file came back). A busy server (429, 502, 503, 504, or a dropped first connection) is asked again twice, after what it asks for in `Retry-After` up to three seconds, before the browser keeps the download.
+
+It needs these permissions: `downloads` (to see and hand over downloads), `webRequest` + `cookies` (to replay your session for the same URL), `contextMenus`, `storage`, `alarms` (to check in with the app every 5 minutes, so the setup guide knows it is installed), and access to all sites (downloads can come from anywhere). It talks only to the app on `127.0.0.1:51723`, and the app accepts calls from this extension only. The setup page can ask it one thing, whether it is installed and reaches the app (`externally_connectable`, limited to `zecod.github.io` and `localhost`).
 
 ## How it works
 

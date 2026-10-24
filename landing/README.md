@@ -7,6 +7,7 @@ Pushing to `main` publishes it to GitHub Pages through `.github/workflows/pages.
 - Layout follows opencode.ai's: one bordered 1080 px column, IBM Plex Mono, black and white with the brand's pale lime for a few highlights, light and dark from the system setting.
 - IBM Plex Mono is served from `assets/fonts/`. The only request to another site is the GitHub API call for the latest release; there are no analytics or CDNs.
 - Sections: hero (with speed lanes), the app window (Fig 1), in action (the demo video, then light/dark screenshots), speed tests (Fig 2), features as illustrated tiles, how the split works (Fig 3), browser extension (Fig 4), comparison with a browser download, downloads per platform, FAQ.
+- `setup.html` (with `setup.js`) is the extension setup page: steps per browser, a live check and troubleshooting. The check sends the extension a `status` message; its manifest accepts messages from `https://zecod.github.io/*` and `localhost` only (`externally_connectable`), and Chromium exposes `chrome.runtime` to the page only while such an extension is installed. The extension's popup links here.
 - The feature illustrations are inline SVG animated with CSS. They pause off screen and hold still under `prefers-reduced-motion`.
 
 ## Speed numbers

@@ -740,3 +740,48 @@ details[open] .plus::after{transform:rotate(0)}
   .fb .seg,.steps li,.step-n,.platform,.play-big{transition:none}
   .ill *,.hl{animation:none !important}
 }
+
+/* extension setup page */
+.su-hero .kicker{margin-bottom:14px}
+.su-hero h1{font-size:40px;line-height:52px}
+.su-status{display:flex;align-items:center;gap:16px;max-width:780px;margin-top:36px;padding:16px 18px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface)}
+.su-light{flex:none;width:12px;height:12px;border-radius:50%;background:var(--weak)}
+.su-status[data-state="checking"] .su-light{animation:su-pulse 1s ease-in-out infinite alternate}
+.su-status[data-state="ok"]{border-color:var(--accent-line)}
+.su-status[data-state="ok"] .su-light{background:#3a9a62;box-shadow:0 0 0 4px rgba(58,154,98,.2)}
+.su-status[data-state="warn"] .su-light{background:#d29b1f;box-shadow:0 0 0 4px rgba(210,155,31,.2)}
+.su-status[data-state="missing"] .su-light,.su-status[data-state="off"] .su-light{background:#c2453b;box-shadow:0 0 0 4px rgba(194,69,59,.18)}
+.su-msg{flex:1;min-width:0;line-height:24px}
+.su-msg strong{display:block}
+.su-msg p{color:var(--text);font-size:14px}
+.su-status .button{flex:none}
+.su-checks{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:14px;color:var(--muted);font-size:13px;line-height:22px}
+.su-checks li{display:flex;align-items:center;gap:8px}
+.su-mark{width:16px;color:var(--weak);text-align:center}
+.su-mark::before{content:"·"}
+.su-checks li[data-ok="true"]{color:var(--strong)}
+.su-checks li[data-ok="true"] .su-mark::before{content:"✓";color:#3a9a62}
+.su-checks li[data-ok="false"] .su-mark::before{content:"×";color:#c2453b}
+.su-pick{margin-top:18px}
+.su-install{margin-top:0}
+.su-install li{font-size:15px;line-height:28px}
+.su-copy{margin-left:6px;padding:0 8px;border:1px solid var(--border);border-radius:3px;background:var(--page);color:var(--strong);font-size:12px;line-height:20px;cursor:pointer;vertical-align:1px}
+.su-copy:hover{background:var(--surface)}
+.su-extra{margin-top:18px;max-width:860px}
+.su-extra li{font-size:15px;line-height:28px}
+#install .install-wrap{margin-top:28px}
+@keyframes su-pulse{from{opacity:.35}to{opacity:1}}
+@media (max-width:640px){
+  .su-hero h1{font-size:26px;line-height:34px}
+  .su-status{flex-wrap:wrap;align-items:flex-start;gap:12px}
+  .su-light{margin-top:6px}
+  .su-msg{flex:1 1 calc(100% - 40px)}
+  .su-status .button{margin-left:24px}
+  .su-install li,.su-extra li{font-size:14px;line-height:26px}
+  .su-pick{display:flex;flex-wrap:wrap}
+  .su-pick button{flex:1 0 auto;padding:4px 10px}
+}
+@media (prefers-reduced-motion:reduce){
+  .su-status .su-light{animation:none}
+}
+.block .ext-actions .button-ghost .button-meta{border-left-color:var(--border)}
