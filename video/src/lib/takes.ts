@@ -32,27 +32,27 @@ export const SINTEL: Race = {
 
 /** Hetzner's 10 GiB test file from Helsinki, Finland: further away, so one connection is slower. */
 export const TEN_GB_HEL: Race = {
-  chrome: { src: "takes/a10hel.mp4", click: 2.628, done: 546.559 },
-  byterush: { src: "takes/b10hel.mp4", click: 2.509, asked: 4.45, started: 6.443, done: 62.032 },
+  chrome: { src: "takes/a10hel.mp4", click: 2.591, done: 576.044 },
+  byterush: { src: "takes/b10hel.mp4", click: 2.367, asked: 4.826, started: 6.84, done: 57.427 },
   file: { name: "10GB.bin", size: "10.7 GB", site: "Hetzner, Helsinki" },
   connections: 16,
   realRate: 2,
   rate: 45,
   recorded: "recorded 24 Oct 2026",
-  note: "Byterush ran as fast as the recording machine's disk writes, about 190 MB/s.",
+  note: "Byterush ran as fast as the recording machine's disk writes, about 210 MB/s.",
 };
 
 /** Hetzner's 10 GiB test file from Falkenstein, Germany. Byterush is held back by the recording
  * machine's disk here (about 200 MB/s), not by the server. */
 export const TEN_GB_FSN: Race = {
-  chrome: { src: "takes/a10fsn.mp4", click: 2.628, done: 301.775 },
-  byterush: { src: "takes/b10fsn.mp4", click: 2.608, asked: 4.581, started: 6.583, done: 57.5 },
+  chrome: { src: "takes/a10fsn.mp4", click: 2.624, done: 339.503 },
+  byterush: { src: "takes/b10fsn.mp4", click: 2.612, asked: 4.534, started: 6.531, done: 52.727 },
   file: { name: "10GB.bin", size: "10.7 GB", site: "Hetzner, Falkenstein" },
   connections: 16,
   realRate: 2,
   rate: 30,
   recorded: "recorded 24 Oct 2026",
-  note: "Byterush ran as fast as the recording machine's disk writes, about 210 MB/s.",
+  note: "Byterush ran as fast as the recording machine's disk writes, about 230 MB/s.",
 };
 
 /** Seconds after the click. */
