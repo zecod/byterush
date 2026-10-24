@@ -109,6 +109,12 @@ first.
 with Byterush using 1, 8 and 16 connections, and prints the times. `cargo run --release --example
 bench_many -- 500 3` measures many small files against a local server.
 
+`scripts/bench-local.sh [out_dir] [size_mb] [connections…]` takes the network out: it serves a
+random file from tmpfs with the `serve` example (range requests, streamed) and compares the engine
+with curl fetching the same number of ranges in parallel, printing wall time and CPU time. Pass a
+tmpfs path such as `/dev/shm` as `out_dir` to take the disk out too; then what is left is the
+engine itself.
+
 ## Code style
 
 - **Rust**: run `cargo fmt` (the project's `rustfmt.toml` keeps lines up to 140 columns) and keep

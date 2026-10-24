@@ -117,7 +117,7 @@ impl Default for Settings {
             download_dir: String::new(),
             temp_dir: String::new(),
             category_subfolders: true,
-            connections: 8,
+            connections: 16,
             max_active: 3,
             speed_limit_kbps: 0,
             monitor_clipboard: true,

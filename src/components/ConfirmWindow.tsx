@@ -36,7 +36,7 @@ export function ConfirmWindow() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [fileName, setFileName] = useState("");
   const [dir, setDir] = useState("");
-  const [connections, setConnections] = useState(8);
+  const [connections, setConnections] = useState(16);
   const [space, setSpace] = useState<DiskSpace | null>(null);
   const [ask, setAsk] = useState(true);
   const [busy, setBusy] = useState(false);
