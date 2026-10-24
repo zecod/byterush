@@ -17,6 +17,8 @@ const VERDICT_TIMEOUT_MS = 25_000;
 
 const seen = new Map();
 
+const WATCHED = { urls: ["<all_urls>"], types: ["main_frame", "sub_frame", "other"] };
+
 chrome.webRequest.onSendHeaders.addListener(
   (d) => {
     seen.set(d.url, {
@@ -26,13 +28,46 @@ chrome.webRequest.onSendHeaders.addListener(
     });
     if (seen.size > 600) prune();
   },
-  { urls: ["<all_urls>"], types: ["main_frame", "sub_frame", "other"] },
+  WATCHED,
   ["requestHeaders", "extraHeaders"],
+);
+
+// What the server answered: a compressed response makes Chrome's byte count differ from the file's
+// (the app always fetches it uncompressed), and Content-Disposition carries the real file name.
+chrome.webRequest.onHeadersReceived.addListener(
+  (d) => {
+    const entry = seen.get(d.url);
+    if (!entry) return;
+    const header = (name) => d.responseHeaders?.find((h) => h.name.toLowerCase() === name)?.value ?? "";
+    const encoding = header("content-encoding").trim().toLowerCase();
+    entry.encoded = encoding !== "" && encoding !== "identity";
+    entry.disposition = header("content-disposition");
+  },
+  WATCHED,
+  ["responseHeaders"],
 );
 
 function prune() {
   const cutoff = Date.now() - HEADER_TTL_MS;
   for (const [url, v] of seen) if (v.at < cutoff) seen.delete(url);
+}
+
+/** File name from a Content-Disposition header (`filename*=` preferred), or null. */
+function nameFromDisposition(value) {
+  if (!value) return null;
+  const star = /filename\*\s*=\s*([^;]+)/i.exec(value);
+  if (star) {
+    const encoded = star[1].trim().replace(/^"|"$/g, "").replace(/^[^']*'[^']*'/, "");
+    try {
+      const name = decodeURIComponent(encoded);
+      if (name) return name;
+    } catch {
+      /* malformed: try the plain form */
+    }
+  }
+  const plain = /filename\s*=\s*("([^"]*)"|[^;]+)/i.exec(value);
+  const name = (plain?.[2] ?? plain?.[1] ?? "").trim();
+  return name || null;
 }
 
 /** Session headers for a URL Chrome didn't request itself (context menu). */
@@ -66,11 +101,16 @@ async function call(path, init = {}, timeoutMs = 1500) {
   }
 }
 
-/** Is the app running with capture on? Cached briefly so downloads aren't delayed. */
+/**
+ * Is the app running with capture on? A running app is remembered for a few seconds so downloads
+ * aren't delayed; "not running" is never remembered, so a download right after the app starts is
+ * caught (asking a closed port fails within milliseconds).
+ */
 async function appReady(force = false) {
-  if (!force && Date.now() - health.at < 10_000) return health;
+  if (!force && health.ok && Date.now() - health.at < 10_000) return health;
   try {
-    const p = await call("/ping", {}, 600);
+    // generous: an app that is busy starting up must not lose the download to a short timeout
+    const p = await call("/ping", {}, 2000);
     health = { ok: true, capture: !!p.capture, version: p.version, at: Date.now() };
   } catch {
     health = { ok: false, capture: false, at: Date.now() };
@@ -96,9 +136,14 @@ function handOver(body, timeoutMs) {
 // downloads already being decided, so the fallback below doesn't handle one twice
 const handled = new Set();
 
+function markHandled(id) {
+  handled.add(id);
+  setTimeout(() => handled.delete(id), 60_000); // long after the fallback could look at it
+}
+
 chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
   const url = item.finalUrl || item.url;
-  handled.add(item.id);
+  markHandled(item.id);
   if (!/^https?:/i.test(url)) {
     suggest(); // blob:, data: — only Chrome has those
     return;
@@ -116,9 +161,13 @@ chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
 chrome.downloads.onCreated.addListener((item) => {
   const url = item.finalUrl || item.url;
   if (!/^https?:/i.test(url) || item.state !== "in_progress") return;
-  setTimeout(() => {
+  setTimeout(async () => {
     if (handled.has(item.id)) return;
-    handled.add(item.id);
+    markHandled(item.id);
+    // the user may have cancelled it meanwhile; a finished one is still worth taking over. The name
+    // Chrome settled on may carry its own " (1)": the app names it from the server instead.
+    const [current] = await chrome.downloads.search({ id: item.id }).catch(() => []);
+    if (!current || current.state === "interrupted") return;
     capture(item).catch(() => {});
   }, 1500);
 });
@@ -126,7 +175,9 @@ chrome.downloads.onCreated.addListener((item) => {
 /** Returns true when the app took the download and Chrome's copy was cancelled. */
 async function capture(item) {
   const url = item.finalUrl || item.url;
-  const name = (item.filename || "").split(/[\\/]/).pop() || null;
+  const request = seen.get(url) ?? seen.get(item.url);
+  // Chrome's suggestion while it picks the name; on the fallback path the server's own
+  const name = (item.filename || "").split(/[\\/]/).pop() || nameFromDisposition(request?.disposition) || null;
   const keepInChrome = async (reason) => {
     if (reason) await addRecent({ name: name || fileFromUrl(url), host: hostOf(url), status: "browser", reason });
     return false;
@@ -137,7 +188,6 @@ async function capture(item) {
   if (isExcluded(settings, hostOf(url)) || isExcluded(settings, hostOf(item.referrer))) return false;
   if (settings.minSizeKb > 0 && item.totalBytes > 0 && item.totalBytes < settings.minSizeKb * 1024) return false;
 
-  const request = seen.get(url) ?? seen.get(item.url);
   if (request && request.method !== "GET") return keepInChrome("form submission — kept in the browser");
 
   const app = await appReady();
@@ -147,7 +197,15 @@ async function capture(item) {
   let verdict;
   try {
     verdict = await handOver(
-      { url, file_name: name, mime: item.mime || null, size: item.totalBytes > 0 ? item.totalBytes : null, headers, source: "capture" },
+      {
+        url,
+        file_name: name,
+        mime: item.mime || null,
+        // a compressed transfer's size is not the file's: let the app check the content type only
+        size: item.totalBytes > 0 && !request?.encoded ? item.totalBytes : null,
+        headers,
+        source: "capture",
+      },
       VERDICT_TIMEOUT_MS,
     );
   } catch {

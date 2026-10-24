@@ -30,13 +30,22 @@ pub struct BridgeStatus {
     pub extension_ids: Vec<String>,
 }
 
-/// Called after a download is taken over, e.g. to tell the UI.
-pub type OnCaptured = Arc<dyn Fn(&str, &str) + Send + Sync>;
+/// Called after a download is taken over: its id, how it came ("capture" or "menu") and whether
+/// it waits for the user's answer in the "New download" window.
+pub type OnCaptured = Arc<dyn Fn(&str, &str, bool) + Send + Sync>;
+
+/// What the app does around a hand-over.
+#[derive(Clone)]
+pub struct Hooks {
+    pub on_captured: OnCaptured,
+    /// The app shows the "New download" window, so `Settings::ask_before_download` applies.
+    pub can_ask: bool,
+}
 
 #[derive(Clone)]
 struct Bridge {
     manager: Manager,
-    on_captured: OnCaptured,
+    hooks: Hooks,
 }
 
 #[derive(Deserialize)]
@@ -102,10 +111,7 @@ fn with_cors(origin: Option<HeaderValue>, body: impl IntoResponse) -> Response {
 
 async fn ping(State(bridge): State<Bridge>, headers: HeaderMap) -> Response {
     let Some(origin) = authorized(&headers) else { return StatusCode::FORBIDDEN.into_response() };
-    with_cors(
-        origin,
-        Json(Ping { app: "byterush", version: env!("CARGO_PKG_VERSION"), capture: bridge.manager.browser_integration() }),
-    )
+    with_cors(origin, Json(Ping { app: "byterush", version: env!("CARGO_PKG_VERSION"), capture: bridge.manager.browser_integration() }))
 }
 
 async fn preflight(headers: HeaderMap) -> Response {
@@ -126,6 +132,16 @@ async fn download(State(bridge): State<Bridge>, headers: HeaderMap, Json(req): J
     if !matches!(url::Url::parse(&req.url).map(|u| u.scheme().to_string()).as_deref(), Ok("http" | "https")) {
         return with_cors(origin, reject("only http(s) links can be taken over".into()));
     }
+    let expect = Expectation { size: req.size.filter(|s| *s > 0), mime: req.mime };
+    // the same file as a paused or failed download (its link expired, typically): the browser's
+    // fresh link continues that download instead of starting a second one from zero
+    let resumable = match (&req.file_name, expect.size) {
+        (Some(name), Some(size)) if req.source != "menu" && bridge.manager.browser_integration() => {
+            bridge.manager.find_resumable(name, size)
+        }
+        _ => None,
+    };
+    let ask = bridge.hooks.can_ask && bridge.manager.settings().ask_before_download;
     let add = AddRequest {
         url: req.url,
         file_name: req.file_name,
@@ -134,13 +150,14 @@ async fn download(State(bridge): State<Bridge>, headers: HeaderMap, Json(req): J
         size: req.size,
         start: true,
         headers: req.headers,
+        confirm: ask,
     };
 
     if req.source == "menu" {
         // nothing is downloading in the browser: just queue it
         return match bridge.manager.add(add).await {
             Ok(id) => {
-                (bridge.on_captured)(&id, "menu");
+                (bridge.hooks.on_captured)(&id, "menu", ask);
                 with_cors(origin, accept(id))
             }
             Err(e) => with_cors(origin, reject(e)),
@@ -150,10 +167,16 @@ async fn download(State(bridge): State<Bridge>, headers: HeaderMap, Json(req): J
     if !bridge.manager.browser_integration() {
         return with_cors(origin, reject("browser integration is turned off in the app".into()));
     }
-    let expect = Expectation { size: req.size.filter(|s| *s > 0), mime: req.mime };
-    let (id, verdict) = match bridge.manager.add_watched(add, expect).await {
-        Ok(v) => v,
-        Err(e) => return with_cors(origin, reject(e)),
+    let adopted = resumable.and_then(|id| {
+        let (verdict, previous) = bridge.manager.adopt(&id, add.url.clone(), add.headers.clone(), expect.clone())?;
+        Some((id, verdict, previous))
+    });
+    let (id, verdict, previous) = match adopted {
+        Some((id, verdict, previous)) => (id, verdict, Some(previous)),
+        None => match bridge.manager.add_watched(add, expect).await {
+            Ok((id, verdict)) => (id, verdict, None),
+            Err(e) => return with_cors(origin, reject(e)),
+        },
     };
     let outcome = match tokio::time::timeout(VERDICT_TIMEOUT, verdict).await {
         Ok(Ok(Ok(()))) => Ok(()),
@@ -163,23 +186,28 @@ async fn download(State(bridge): State<Bridge>, headers: HeaderMap, Json(req): J
     };
     match outcome {
         Ok(()) => {
-            (bridge.on_captured)(&id, "capture");
+            // a continued download (`adopt`) was confirmed when it was first added
+            (bridge.hooks.on_captured)(&id, "capture", ask && previous.is_none());
             with_cors(origin, accept(id))
         }
         Err(reason) => {
-            // the browser keeps it; drop our attempt and anything it wrote
-            bridge.manager.remove(std::slice::from_ref(&id), true);
+            match previous {
+                // the browser keeps it; the earlier download stays as it was
+                Some(previous) => bridge.manager.restore(&id, previous, reason.clone()),
+                // the browser keeps it; drop our attempt and anything it wrote
+                None => bridge.manager.remove(std::slice::from_ref(&id), true),
+            }
             with_cors(origin, reject(reason))
         }
     }
 }
 
 /// Start the bridge on the app's runtime; the returned status reflects whether the port was free.
-pub fn start(manager: Manager, runtime: &tokio::runtime::Handle, on_captured: OnCaptured) -> Arc<Mutex<BridgeStatus>> {
-    start_on(manager, runtime, on_captured, PORT)
+pub fn start(manager: Manager, runtime: &tokio::runtime::Handle, hooks: Hooks) -> Arc<Mutex<BridgeStatus>> {
+    start_on(manager, runtime, hooks, PORT)
 }
 
-pub fn start_on(manager: Manager, runtime: &tokio::runtime::Handle, on_captured: OnCaptured, port: u16) -> Arc<Mutex<BridgeStatus>> {
+pub fn start_on(manager: Manager, runtime: &tokio::runtime::Handle, hooks: Hooks, port: u16) -> Arc<Mutex<BridgeStatus>> {
     let status = Arc::new(Mutex::new(BridgeStatus {
         port,
         extension_ids: EXTENSION_IDS.iter().map(|s| s.to_string()).collect(),
@@ -191,7 +219,7 @@ pub fn start_on(manager: Manager, runtime: &tokio::runtime::Handle, on_captured:
         .method_not_allowed_fallback(|method: Method, headers: HeaderMap| async move {
             if method == Method::OPTIONS { preflight(headers).await } else { StatusCode::METHOD_NOT_ALLOWED.into_response() }
         })
-        .with_state(Bridge { manager, on_captured });
+        .with_state(Bridge { manager, hooks });
 
     let reported = status.clone();
     runtime.spawn(async move {

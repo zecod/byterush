@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
-export type Status = "queued" | "connecting" | "downloading" | "finishing" | "paused" | "completed" | "error";
+/** "waiting": handed over by the browser, on hold until the user answers its "New download" window. */
+export type Status = "queued" | "connecting" | "waiting" | "downloading" | "finishing" | "paused" | "completed" | "error";
 export type Category = "general" | "compressed" | "documents" | "music" | "programs" | "video";
 
 export interface Segment {
@@ -44,7 +45,11 @@ export interface Settings {
   browser_integration: boolean;
   retries: number;
   theme: "system" | "dark" | "light";
+  /** Empty = the built-in browser user-agent. */
   user_agent: string;
+  resume_on_startup: boolean;
+  /** Ask where to save a browser download, in the "New download" window, before it goes on. */
+  ask_before_download: boolean;
 }
 
 export interface ProbeInfo {
@@ -67,6 +72,20 @@ export interface AddRequest {
   start: boolean;
 }
 
+/** The answer from a "New download" window; empty fields keep what the download has. */
+export interface Confirmation {
+  file_name?: string;
+  dir?: string;
+  connections?: number;
+  /** Start now; otherwise it stays paused for later. */
+  start: boolean;
+}
+
+export interface DiskSpace {
+  free: number;
+  total: number;
+}
+
 export interface BridgeStatus {
   listening: boolean;
   port: number;
@@ -85,6 +104,7 @@ export const api = {
   add: (request: AddRequest) => invoke<string>("add_download", { request }),
   addMany: (requests: AddRequest[]) => invoke<{ ids: string[]; errors: string[] }>("add_downloads", { requests }),
   sync: () => invoke<void>("sync_downloads"),
+  refresh: (id: string, url: string) => invoke<void>("refresh_download", { id, url }),
   get: (id: string) => invoke<Download | null>("get_download", { id }),
   pause: (ids: string[]) => invoke<void>("pause_downloads", { ids }),
   resume: (ids: string[]) => invoke<void>("resume_downloads", { ids }),
@@ -95,11 +115,22 @@ export const api = {
   reveal: (id: string) => invoke<void>("reveal_download", { id }),
   bridgeStatus: () => invoke<BridgeStatus>("bridge_status"),
   openExtensionFolder: () => invoke<string>("open_extension_folder"),
+  /** Returns the file name the download got (" (1)" added when the folder has that name). */
+  confirm: (id: string, choice: Confirmation) => invoke<string>("confirm_download", { id, choice }),
+  /** "Cancel" in the "New download" window: drop the download and what it wrote. */
+  cancelAsked: (id: string) => invoke<void>("cancel_download", { id }),
+  /** The download the "New download" window should show now. */
+  askingNow: () => invoke<string | null>("asking_now"),
+  /** Show the "New download" window again for a download waiting for an answer. */
+  ask: (id: string) => invoke<void>("ask_download", { id }),
+  diskSpace: (dir: string) => invoke<DiskSpace | null>("disk_space", { dir }),
 };
 
 export const isActive = (s: Status) => s === "downloading" || s === "connecting";
 /** Busy in any way, including the final rebuild/move (which can't be paused). */
 export const isWorking = (s: Status) => isActive(s) || s === "finishing";
+/** Not started yet: in the queue, or waiting for the user's answer. */
+export const isPending = (s: Status) => s === "queued" || s === "waiting";
 
 export function formatBytes(n: number | null | undefined): string {
   if (n == null) return "Unknown";
@@ -112,6 +143,12 @@ export function formatBytes(n: number | null | undefined): string {
     i++;
   }
   return `${v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2)} ${units[i]}`;
+}
+
+/** A percentage of 0..100, rounded down so a part that is not finished never reads 100%. */
+export function formatPercent(pct: number, digits = 0): string {
+  const k = 10 ** digits;
+  return `${(Math.floor(pct * k) / k).toFixed(digits)}%`;
 }
 
 export const formatSpeed = (bps: number) => (bps > 0 ? `${formatBytes(Math.round(bps))}/s` : "");
@@ -136,6 +173,7 @@ export function formatDate(ms: number): string {
 export const statusLabel: Record<Status, string> = {
   queued: "queued",
   connecting: "connecting",
+  waiting: "waiting for you",
   downloading: "downloading",
   finishing: "finishing",
   paused: "paused",

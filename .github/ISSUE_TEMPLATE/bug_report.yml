@@ -1,0 +1,83 @@
+name: Bug report
+description: Something doesn't work as it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please search the [existing issues](https://github.com/zecod/byterush/issues?q=is%3Aissue) first.
+        Found a security problem? Don't file it here: report it privately as described in [SECURITY.md](https://github.com/zecod/byterush/blob/main/SECURITY.md).
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version and details
+      description: For example "Windows 11 24H2", "macOS 15.4", "Ubuntu 24.04, AppImage" or "Fedora 42, .rpm".
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: Byterush version
+      description: Shown in Settings, or the version of the installer you downloaded.
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and extension version
+      description: Only if the browser extension is involved. The extension version is on chrome://extensions or edge://extensions.
+      placeholder: "Chrome 141, extension 0.3.0"
+  - type: input
+    id: host
+    attributes:
+      label: Download host
+      description: The host name of the download URL (for example `download.example.org`). The full URL helps too, but leave out tokens, session ids or anything private.
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Click the download link on …
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead, including any error message shown in the app or the extension popup.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots
+      description: Error messages, the extension's service worker console (chrome://extensions → Byterush → "service worker"), screenshots. Remove cookies and tokens before posting.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched the existing issues and this hasn't been reported yet.
+          required: true

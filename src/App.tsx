@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
@@ -7,6 +8,7 @@ import {
   DashboardSpeed01Icon,
   Delete02Icon,
   FolderOpenIcon,
+  Link01Icon,
   LinkSquare02Icon,
   PauseCircleIcon,
   PauseIcon,
@@ -16,7 +18,7 @@ import {
   Settings02Icon,
 } from "@hugeicons/core-free-icons";
 import type { Delta, Download, Settings } from "./api";
-import { api, isActive, isMac, isWorking, shortcut } from "./api";
+import { api, isActive, isMac, isPending, isWorking, shortcut } from "./api";
 import { AddDialog } from "./components/AddDialog";
 import { DetailsPanel } from "./components/DetailsPanel";
 import { DownloadTable } from "./components/DownloadTable";
@@ -24,6 +26,7 @@ import { Icon } from "./components/icons";
 import { Logo } from "./components/Logo";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ConfirmDelete } from "./components/Modal";
+import { RefreshDialog } from "./components/RefreshDialog";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { type Filter, matches, Sidebar } from "./components/Sidebar";
 import "./App.css";
@@ -50,6 +53,7 @@ export default function App() {
   // rows live in a Map fed by delta events; `rev` triggers re-renders
   const store = useRef(new Map<string, Download>());
   const [rev, setRev] = useState(0);
+  const [loaded, setLoaded] = useState(false);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
@@ -59,6 +63,7 @@ export default function App() {
   const [addUrl, setAddUrl] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [confirmIds, setConfirmIds] = useState<string[] | null>(null);
+  const [refreshFor, setRefreshFor] = useState<Download | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; d: Download } | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [speedHistory, setSpeedHistory] = useState<number[]>(() => Array(HISTORY).fill(0));
@@ -80,6 +85,17 @@ export default function App() {
     setShowDetails(true);
   }, []);
   const fail = useCallback((e: unknown) => toast({ kind: "error", text: String(e) }, 7000), [toast]);
+
+  // the window starts hidden so it never flashes blank: show it once the first rows are drawn
+  const shown = useRef(false);
+  const reveal = useCallback(() => {
+    if (shown.current) return;
+    shown.current = true;
+    getCurrentWindow()
+      .show()
+      .then(() => getCurrentWindow().setFocus())
+      .catch(() => {});
+  }, []);
 
   // live data
   useEffect(() => {
@@ -115,31 +131,48 @@ export default function App() {
             clearTimeout(flushTimer);
             flushTimer = window.setTimeout(flushFinished, 800);
           }
-          if (d.status === "error") toast({ kind: "error", text: `${d.file_name}: ${d.error}` }, 8000);
+          if (d.status === "error")
+            toast(
+              {
+                kind: "error",
+                text: `${d.file_name}: ${d.error}`,
+                actions: d.resumable ? [{ label: "update link", run: () => setRefreshFor(d) }] : undefined,
+              },
+              10000,
+            );
         }
         map.set(d.id, d);
       }
       for (const id of removed) map.delete(id);
       setRev((r) => r + 1);
+      if (full) {
+        setLoaded(true);
+        requestAnimationFrame(() => requestAnimationFrame(reveal));
+      }
     };
     const unDelta = listen<Delta>("downloads-delta", (e) => apply(e.payload));
     const unClipboard = listen<string>("clipboard-url", (e) =>
       toast({ kind: "info", text: `copied · ${e.payload}`, actions: [{ label: "download", run: () => setAddUrl(e.payload) }] }, 9000),
     );
-    const unCaptured = listen<{ id: string; source: string }>("browser-captured", (e) => {
-      const d = store.current.get(e.payload.id);
-      toast({ kind: "info", text: `from browser · ${d?.file_name ?? "new download"}` }, 4000);
+    const unCaptured = listen<{ id: string; source: string; waiting: boolean }>("browser-captured", (e) => {
+      // one waiting for an answer has its own "New download" window
+      if (!e.payload.waiting) {
+        const d = store.current.get(e.payload.id);
+        toast({ kind: "info", text: `from browser · ${d?.file_name ?? "new download"}` }, 4000);
+      }
       focusDownload(e.payload.id);
     });
     unDelta.then(() => api.sync()).catch(fail);
     api.getSettings().then(setSettings).catch(fail);
+    const revealAnyway = window.setTimeout(reveal, 1000);
     return () => {
       clearTimeout(flushTimer);
+      clearTimeout(revealAnyway);
       unDelta.then((f) => f());
       unClipboard.then((f) => f());
       unCaptured.then((f) => f());
     };
-  }, [toast, fail, focusDownload]);
+  }, [toast, fail, focusDownload, reveal]);
 
   const downloads = useMemo(() => [...store.current.values()], [rev]);
 
@@ -171,7 +204,7 @@ export default function App() {
   const ids = selectedDownloads.map((d) => d.id);
   const single = selectedDownloads.length === 1 ? selectedDownloads[0] : null;
   const canResume = selectedDownloads.some((d) => d.status === "paused" || d.status === "error");
-  const canPause = selectedDownloads.some((d) => isActive(d.status) || d.status === "queued");
+  const canPause = selectedDownloads.some((d) => isActive(d.status) || isPending(d.status));
   const activeCount = downloads.filter((d) => isWorking(d.status)).length;
 
   const onSelect = (id: string, e: React.MouseEvent) => {
@@ -196,7 +229,8 @@ export default function App() {
 
   const activate = (d: Download) => {
     if (d.status === "completed") api.open(d.id).catch(fail);
-    else if (isActive(d.status) || d.status === "queued") api.pause([d.id]);
+    else if (d.status === "waiting") api.ask(d.id).catch(fail);
+    else if (isActive(d.status) || isPending(d.status)) api.pause([d.id]);
     else api.resume([d.id]);
   };
 
@@ -223,7 +257,7 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
       const typing = (e.target as HTMLElement).closest("input, textarea, select");
-      if (addUrl !== null || showSettings || confirmIds) return;
+      if (addUrl !== null || showSettings || confirmIds || refreshFor) return;
       const key = e.key.toLowerCase();
       if (mod && key === "n") {
         e.preventDefault();
@@ -327,6 +361,7 @@ export default function App() {
 
           <DownloadTable
             downloads={visible}
+            loaded={loaded}
             selected={selected}
             onSelect={onSelect}
             onActivate={activate}
@@ -357,7 +392,7 @@ export default function App() {
             <button onClick={() => api.open(menu.d.id).catch(fail)}>
               <Icon icon={LinkSquare02Icon} size={15} /> open
             </button>
-          ) : isActive(menu.d.status) || menu.d.status === "queued" ? (
+          ) : isActive(menu.d.status) || isPending(menu.d.status) ? (
             <button onClick={() => api.pause(ids)}>
               <Icon icon={PauseIcon} size={15} /> pause
             </button>
@@ -369,6 +404,11 @@ export default function App() {
           <button onClick={() => api.reveal(menu.d.id).catch(fail)}>
             <Icon icon={FolderOpenIcon} size={15} /> show in folder
           </button>
+          {menu.d.status !== "completed" && !isWorking(menu.d.status) && !isPending(menu.d.status) && (
+            <button onClick={() => setRefreshFor(menu.d)}>
+              <Icon icon={Link01Icon} size={15} /> update link…
+            </button>
+          )}
           <button
             onClick={() => {
               navigator.clipboard.writeText(menu.d.url);
@@ -394,6 +434,13 @@ export default function App() {
         />
       )}
       {showSettings && settings && <SettingsDialog settings={settings} onSave={saveSettings} onClose={() => setShowSettings(false)} />}
+      {refreshFor && (
+        <RefreshDialog
+          download={refreshFor}
+          onClose={() => setRefreshFor(null)}
+          onDone={() => toast({ kind: "info", text: `link updated · ${refreshFor.file_name}` }, 3000)}
+        />
+      )}
       {confirmIds && (
         <ConfirmDelete
           count={confirmIds.length}

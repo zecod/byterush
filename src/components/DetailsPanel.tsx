@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import type { Download, Segment } from "../api";
-import { api, formatBytes, formatDate, formatEta, formatSpeed, isWorking, statusLabel } from "../api";
+import { api, formatBytes, formatDate, formatEta, formatPercent, formatSpeed, isWorking, statusLabel } from "../api";
 import { Icon } from "./icons";
 
 const POLL_MS = 300;
@@ -59,7 +59,7 @@ function FinishingBar({ d }: { d: Download }) {
     <div className="finishing">
       <div className="finishing-head">
         <span>{what}</span>
-        <span>{f && f.total ? `${formatBytes(f.done)} / ${formatBytes(f.total)} · ${pct.toFixed(0)}%` : ""}</span>
+        <span>{f && f.total ? `${formatBytes(f.done)} / ${formatBytes(f.total)} · ${formatPercent(pct)}` : ""}</span>
       </div>
       <div className={`finishing-bar ${stalledFor >= 10 ? "stalled" : ""}`}>
         <div style={{ width: `${pct}%` }} />
@@ -111,7 +111,7 @@ export function DetailsPanel({ row, onClose }: { row: Download; onClose: () => v
             <span className={`status-text status-${d.status}`}>{statusLabel[d.status]}</span>
             {live && <span className="live-speed">{formatSpeed(d.speed) || "0 B/s"}</span>}
             <span>
-              {formatBytes(d.downloaded)} / {formatBytes(d.size)} · {pct.toFixed(1)}%
+              {formatBytes(d.downloaded)} / {formatBytes(d.size)} · {formatPercent(pct, 1)}
             </span>
             {d.eta != null && live && <span>{formatEta(d.eta)} left</span>}
             {d.active_connections > 0 && <span>{d.active_connections} connections</span>}
@@ -158,7 +158,7 @@ export function DetailsPanel({ row, onClose }: { row: Download; onClose: () => v
                     <span className="mini-bar">
                       <span style={{ width: `${p}%` }} />
                     </span>
-                    {p.toFixed(0)}%
+                    {formatPercent(p)}
                   </span>
                   <span className="seg-speed">{active ? formatSpeed(sp) : p >= 100 ? "done" : "—"}</span>
                 </div>
