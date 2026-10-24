@@ -17,7 +17,16 @@ async fn main() {
 
     let started = Instant::now();
     let id = manager
-        .add(AddRequest { url, file_name: None, dir: Some(out.to_string_lossy().into()), connections, size: None, start: true, headers: Vec::new() })
+        .add(AddRequest {
+            url,
+            file_name: None,
+            dir: Some(out.to_string_lossy().into()),
+            connections,
+            size: None,
+            start: true,
+            headers: Vec::new(),
+            confirm: false,
+        })
         .await
         .expect("add");
     loop {
