@@ -14,10 +14,11 @@ import {
   PauseIcon,
   PlayCircleIcon,
   PlayIcon,
+  PuzzleIcon,
   Search01Icon,
   Settings02Icon,
 } from "@hugeicons/core-free-icons";
-import type { Delta, Download, Settings } from "./api";
+import type { Browser, Delta, Download, Settings } from "./api";
 import { api, isActive, isMac, isPending, isWorking, shortcut } from "./api";
 import { AddDialog } from "./components/AddDialog";
 import { DetailsPanel } from "./components/DetailsPanel";
@@ -25,6 +26,7 @@ import { DownloadTable } from "./components/DownloadTable";
 import { Icon } from "./components/icons";
 import { Logo } from "./components/Logo";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { browserList, ExtensionSetup } from "./components/ExtensionSetup";
 import { ConfirmDelete } from "./components/Modal";
 import { RefreshDialog } from "./components/RefreshDialog";
 import { SettingsDialog } from "./components/SettingsDialog";
@@ -64,6 +66,9 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [confirmIds, setConfirmIds] = useState<string[] | null>(null);
   const [refreshFor, setRefreshFor] = useState<Download | null>(null);
+  const [showSetup, setShowSetup] = useState(false);
+  const [browsers, setBrowsers] = useState<Browser[]>([]);
+  const [extensionSeen, setExtensionSeen] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number; d: Download } | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [speedHistory, setSpeedHistory] = useState<number[]>(() => Array(HISTORY).fill(0));
@@ -162,6 +167,10 @@ export default function App() {
       }
       focusDownload(e.payload.id);
     });
+    // the extension asked, but the app couldn't take it (the server refused it, the link expired…)
+    const unKept = listen<{ name: string; reason: string }>("browser-kept", (e) =>
+      toast({ kind: "info", text: `left to the browser · ${e.payload.name} · ${e.payload.reason}` }, 8000),
+    );
     unDelta.then(() => api.sync()).catch(fail);
     api.getSettings().then(setSettings).catch(fail);
     const revealAnyway = window.setTimeout(reveal, 1000);
@@ -171,10 +180,26 @@ export default function App() {
       unDelta.then((f) => f());
       unClipboard.then((f) => f());
       unCaptured.then((f) => f());
+      unKept.then((f) => f());
     };
   }, [toast, fail, focusDownload, reveal]);
 
   const downloads = useMemo(() => [...store.current.values()], [rev]);
+
+  // until the extension first checks in, suggest setting it up, naming the browsers found here
+  const suggestSetup = !!settings && settings.browser_integration && !settings.extension_seen_ms && !settings.setup_hint_dismissed && !extensionSeen;
+  useEffect(() => {
+    if (!suggestSetup) return;
+    api.installedBrowsers().then(setBrowsers).catch(() => {});
+    const check = () =>
+      api
+        .bridgeStatus()
+        .then((b) => b.extension_seen_ms && setExtensionSeen(true))
+        .catch(() => {});
+    check();
+    const timer = setInterval(check, 5000);
+    return () => clearInterval(timer);
+  }, [suggestSetup]);
 
   // throughput history for the sparkline, sampled once a second
   const totalSpeed = useRef(0);
@@ -257,7 +282,7 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
       const typing = (e.target as HTMLElement).closest("input, textarea, select");
-      if (addUrl !== null || showSettings || confirmIds || refreshFor) return;
+      if (addUrl !== null || showSettings || showSetup || confirmIds || refreshFor) return;
       const key = e.key.toLowerCase();
       if (mod && key === "n") {
         e.preventDefault();
@@ -359,6 +384,23 @@ export default function App() {
             </div>
           </div>
 
+          {suggestSetup && (
+            <div className="setup-hint">
+              <Icon icon={PuzzleIcon} size={16} />
+              <span>
+                <b>catch downloads from {browsers.length ? browserList(browsers) : "your browser"}</b> · add the byterush extension and
+                downloads you start there come here, with the browser's login
+              </span>
+              <div className="spacer" />
+              <button className="btn primary" onClick={() => setShowSetup(true)}>
+                set up
+              </button>
+              <button className="btn ghost" onClick={() => settings && saveSettings({ ...settings, setup_hint_dismissed: true })} title="Don't suggest it again">
+                not now
+              </button>
+            </div>
+          )}
+
           <DownloadTable
             downloads={visible}
             loaded={loaded}
@@ -434,6 +476,15 @@ export default function App() {
         />
       )}
       {showSettings && settings && <SettingsDialog settings={settings} onSave={saveSettings} onClose={() => setShowSettings(false)} />}
+      {showSetup && settings && (
+        <ExtensionSetup
+          settings={settings}
+          onClose={() => {
+            setShowSetup(false);
+            api.getSettings().then(setSettings).catch(fail);
+          }}
+        />
+      )}
       {refreshFor && (
         <RefreshDialog
           download={refreshFor}

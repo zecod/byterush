@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Icon } from "./icons";
 
@@ -10,14 +11,20 @@ interface Props {
 }
 
 export function Modal({ title, onClose, width = 480, children }: Props) {
+  const backdrop = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      // with a dialog opened from another (setup from settings), Escape closes the top one only
+      const open = document.querySelectorAll(".backdrop");
+      if (e.key === "Escape" && open[open.length - 1] === backdrop.current) onClose();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  return (
-    <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+  // in <body>, so a dialog opened from another one isn't placed or clipped by it
+  return createPortal(
+    <div ref={backdrop} className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ width }} role="dialog" aria-label={title}>
         <header className="modal-head">
           <h2>{title}</h2>
@@ -27,7 +34,8 @@ export function Modal({ title, onClose, width = 480, children }: Props) {
         </header>
         <div className="modal-body">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

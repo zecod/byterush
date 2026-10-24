@@ -7,7 +7,7 @@
 // file; only then is Chrome's copy cancelled. Anything the app can't reproduce (bot checks,
 // one-time links, form posts) simply continues in Chrome.
 
-import { APP_NAME, API, getSettings, hostOf, isExcluded, addRecent, fileFromUrl } from "./shared.js";
+import { APP_NAME, API, getSettings, hostOf, isExcluded, addRecent, fileFromUrl, browserName } from "./shared.js";
 
 const HEADER_TTL_MS = 2 * 60 * 1000;
 const VERDICT_TIMEOUT_MS = 25_000;
@@ -86,13 +86,19 @@ async function sessionHeaders(url, referrer) {
 // ---------------------------------------------------------------------------------------------
 // talking to the app
 
-let health = { ok: false, capture: false, at: 0 };
+let health = { ok: false, capture: false, minSize: 0, at: 0 };
 
 async function call(path, init = {}, timeoutMs = 1500) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const headers = { ...(init.headers ?? {}), "x-byterush-ext": chrome.runtime.id };
+    const headers = {
+      ...(init.headers ?? {}),
+      "x-byterush-ext": chrome.runtime.id,
+      // shown in the app's setup guide: which browser checked in
+      "x-byterush-browser": browserName(),
+      "x-byterush-ext-version": chrome.runtime.getManifest().version,
+    };
     const res = await fetch(`${API}${path}`, { ...init, headers, signal: ctrl.signal });
     if (!res.ok) throw new Error(`app answered ${res.status}`);
     return await res.json();
@@ -104,16 +110,21 @@ async function call(path, init = {}, timeoutMs = 1500) {
 /**
  * Is the app running with capture on? A running app is remembered for a few seconds so downloads
  * aren't delayed; "not running" is never remembered, so a download right after the app starts is
- * caught (asking a closed port fails within milliseconds).
+ * caught (asking a closed port fails within milliseconds). A failed ask is repeated once a moment
+ * later: an app that is starting or busy must not lose the download to one unlucky ping.
  */
 async function appReady(force = false) {
   if (!force && health.ok && Date.now() - health.at < 10_000) return health;
-  try {
-    // generous: an app that is busy starting up must not lose the download to a short timeout
-    const p = await call("/ping", {}, 2000);
-    health = { ok: true, capture: !!p.capture, version: p.version, at: Date.now() };
-  } catch {
-    health = { ok: false, capture: false, at: Date.now() };
+  for (const wait of [0, 300]) {
+    if (wait) await new Promise((r) => setTimeout(r, wait));
+    try {
+      // generous: an app that is busy starting up must not lose the download to a short timeout
+      const p = await call("/ping", {}, 2000);
+      health = { ok: true, capture: !!p.capture, version: p.version, minSize: p.min_size || 0, at: Date.now() };
+      return health;
+    } catch {
+      health = { ok: false, capture: false, minSize: 0, at: Date.now() };
+    }
   }
   return health;
 }
@@ -186,12 +197,17 @@ async function capture(item) {
   const settings = await getSettings();
   if (!settings.enabled) return false;
   if (isExcluded(settings, hostOf(url)) || isExcluded(settings, hostOf(item.referrer))) return false;
-  if (settings.minSizeKb > 0 && item.totalBytes > 0 && item.totalBytes < settings.minSizeKb * 1024) return false;
 
   if (request && request.method !== "GET") return keepInChrome("form submission — kept in the browser");
 
   const app = await appReady();
-  if (!app.ok || !app.capture) return false;
+  if (!app.ok) return keepInChrome(`${APP_NAME} is not running`);
+  if (!app.capture) return false;
+  // small files the user leaves to the browser (Byterush settings); a compressed transfer's size is
+  // not the file's, so the app decides those from its first response
+  if (app.minSize > 0 && item.totalBytes > 0 && !request?.encoded && item.totalBytes < app.minSize) {
+    return keepInChrome(`smaller than ${sizeLabel(app.minSize)}: left to the browser, as set in ${APP_NAME}`);
+  }
 
   const headers = request?.headers ?? (await sessionHeaders(url, item.referrer));
   let verdict;
@@ -252,6 +268,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 });
 
+/** "1 GB", "500 MB". */
+function sizeLabel(bytes) {
+  const mb = Math.floor(bytes / (1024 * 1024));
+  return mb >= 1024 && mb % 1024 === 0 ? `${mb / 1024} GB` : `${mb} MB`;
+}
+
 // ---------------------------------------------------------------------------------------------
 
 function flash(text, color) {
@@ -266,4 +288,30 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     appReady(true).then(reply);
     return true;
   }
+});
+
+// Check in with the app when the browser starts, when the extension is installed, and every few
+// minutes: its setup guide then knows the extension is there before any download.
+const checkIn = () => appReady(true).catch(() => {});
+function scheduleCheckIns() {
+  chrome.alarms.create("check-in", { periodInMinutes: 5 });
+  checkIn();
+}
+chrome.runtime.onStartup.addListener(scheduleCheckIns);
+chrome.runtime.onInstalled.addListener(scheduleCheckIns);
+chrome.alarms.onAlarm.addListener((alarm) => alarm.name === "check-in" && checkIn());
+
+// The setup guide on the website asks whether the extension is installed and reaches the app
+// (only the pages listed under "externally_connectable" in the manifest can ask).
+chrome.runtime.onMessageExternal.addListener((msg, _sender, reply) => {
+  if (msg?.type !== "status") return;
+  appReady(true).then((h) =>
+    reply({
+      extension: chrome.runtime.getManifest().version,
+      browser: browserName(),
+      app: h.ok ? h.version : null,
+      capture: h.ok && h.capture,
+    }),
+  );
+  return true;
 });

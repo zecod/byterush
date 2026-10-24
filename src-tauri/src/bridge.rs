@@ -4,7 +4,7 @@
 //! can't add a custom header to a cross-origin request without a CORS preflight, and preflights
 //! are only answered for the extension. When an `Origin` is present it must be the extension too.
 
-use crate::engine::{AddRequest, Expectation, Manager};
+use crate::engine::{AddRequest, Expectation, Manager, now_ms};
 use axum::extract::State;
 use axum::http::{HeaderMap, HeaderValue, Method, StatusCode, header};
 use axum::response::{IntoResponse, Response};
@@ -28,16 +28,25 @@ pub struct BridgeStatus {
     pub port: u16,
     pub error: Option<String>,
     pub extension_ids: Vec<String>,
+    /// When the extension last checked in (ms since the epoch), from which browser, in which version.
+    pub extension_seen_ms: Option<u64>,
+    pub extension_browser: Option<String>,
+    pub extension_version: Option<String>,
 }
 
 /// Called after a download is taken over: its id, how it came ("capture" or "menu") and whether
 /// it waits for the user's answer in the "New download" window.
 pub type OnCaptured = Arc<dyn Fn(&str, &str, bool) + Send + Sync>;
 
+/// Called when the browser keeps a download it offered because the app couldn't take it: the
+/// file's name and why.
+pub type OnDeclined = Arc<dyn Fn(&str, &str) + Send + Sync>;
+
 /// What the app does around a hand-over.
 #[derive(Clone)]
 pub struct Hooks {
     pub on_captured: OnCaptured,
+    pub on_declined: OnDeclined,
     /// The app shows the "New download" window, so `Settings::ask_before_download` applies.
     pub can_ask: bool,
 }
@@ -46,6 +55,7 @@ pub struct Hooks {
 struct Bridge {
     manager: Manager,
     hooks: Hooks,
+    status: Arc<Mutex<BridgeStatus>>,
 }
 
 #[derive(Deserialize)]
@@ -75,6 +85,18 @@ struct Ping {
     app: &'static str,
     version: &'static str,
     capture: bool,
+    /// Downloads smaller than this (bytes) stay in the browser; 0: none.
+    min_size: u64,
+}
+
+/// "1 GB", "500 MB".
+fn size_label(bytes: u64) -> String {
+    let mb = bytes / (1024 * 1024);
+    if mb >= 1024 && mb.is_multiple_of(1024) { format!("{} GB", mb / 1024) } else { format!("{mb} MB") }
+}
+
+fn left_small(min: u64) -> String {
+    format!("smaller than {}: left to the browser, as set in Byterush", size_label(min))
 }
 
 const CLIENT_HEADER: &str = "x-byterush-ext";
@@ -103,7 +125,10 @@ fn with_cors(origin: Option<HeaderValue>, body: impl IntoResponse) -> Response {
         let h = resp.headers_mut();
         h.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, origin);
         h.insert(header::ACCESS_CONTROL_ALLOW_METHODS, HeaderValue::from_static("GET, POST, OPTIONS"));
-        h.insert(header::ACCESS_CONTROL_ALLOW_HEADERS, HeaderValue::from_static("content-type, x-byterush-ext"));
+        h.insert(
+            header::ACCESS_CONTROL_ALLOW_HEADERS,
+            HeaderValue::from_static("content-type, x-byterush-ext, x-byterush-ext-version, x-byterush-browser"),
+        );
         h.insert(header::VARY, HeaderValue::from_static("Origin"));
     }
     resp
@@ -111,7 +136,32 @@ fn with_cors(origin: Option<HeaderValue>, body: impl IntoResponse) -> Response {
 
 async fn ping(State(bridge): State<Bridge>, headers: HeaderMap) -> Response {
     let Some(origin) = authorized(&headers) else { return StatusCode::FORBIDDEN.into_response() };
-    with_cors(origin, Json(Ping { app: "byterush", version: env!("CARGO_PKG_VERSION"), capture: bridge.manager.browser_integration() }))
+    // the app's setup guide shows whether, and from which browser, the extension checks in
+    let text = |name: &str| headers.get(name).and_then(|v| v.to_str().ok()).map(|v| v.chars().take(40).collect::<String>());
+    let (browser, version) = (text("x-byterush-browser"), text("x-byterush-ext-version"));
+    if let Some(browser) = &browser {
+        bridge.manager.note_extension(browser);
+    }
+    {
+        let mut s = bridge.status.lock().unwrap();
+        s.extension_seen_ms = Some(now_ms());
+        if browser.is_some() {
+            s.extension_browser = browser;
+        }
+        if version.is_some() {
+            s.extension_version = version;
+        }
+    }
+    let settings = bridge.manager.settings();
+    with_cors(
+        origin,
+        Json(Ping {
+            app: "byterush",
+            version: env!("CARGO_PKG_VERSION"),
+            capture: settings.browser_integration,
+            min_size: settings.takeover_min_bytes(),
+        }),
+    )
 }
 
 async fn preflight(headers: HeaderMap) -> Response {
@@ -133,6 +183,14 @@ async fn download(State(bridge): State<Bridge>, headers: HeaderMap, Json(req): J
         return with_cors(origin, reject("only http(s) links can be taken over".into()));
     }
     let expect = Expectation { size: req.size.filter(|s| *s > 0), mime: req.mime };
+    let settings = bridge.manager.settings();
+    // small files the user leaves to the browser (a link picked from the menu is always taken)
+    let min = if req.source == "menu" { 0 } else { settings.takeover_min_bytes() };
+    if min > 0 && expect.size.is_some_and(|s| s < min) {
+        return with_cors(origin, reject(left_small(min)));
+    }
+    let name = req.file_name.clone().or_else(|| url::Url::parse(&req.url).ok().and_then(|u| crate::engine::naming::from_url(&u)));
+    let declined = |reason: &str| (bridge.hooks.on_declined)(name.as_deref().unwrap_or("a download"), reason);
     // the same file as a paused or failed download (its link expired, typically): the browser's
     // fresh link continues that download instead of starting a second one from zero
     let resumable = match (&req.file_name, expect.size) {
@@ -141,7 +199,7 @@ async fn download(State(bridge): State<Bridge>, headers: HeaderMap, Json(req): J
         }
         _ => None,
     };
-    let ask = bridge.hooks.can_ask && bridge.manager.settings().ask_before_download;
+    let ask = bridge.hooks.can_ask && settings.ask_before_download;
     let add = AddRequest {
         url: req.url,
         file_name: req.file_name,
@@ -175,7 +233,10 @@ async fn download(State(bridge): State<Bridge>, headers: HeaderMap, Json(req): J
         Some((id, verdict, previous)) => (id, verdict, Some(previous)),
         None => match bridge.manager.add_watched(add, expect).await {
             Ok((id, verdict)) => (id, verdict, None),
-            Err(e) => return with_cors(origin, reject(e)),
+            Err(e) => {
+                declined(&e);
+                return with_cors(origin, reject(e));
+            }
         },
     };
     let outcome = match tokio::time::timeout(VERDICT_TIMEOUT, verdict).await {
@@ -184,6 +245,14 @@ async fn download(State(bridge): State<Bridge>, headers: HeaderMap, Json(req): J
         Ok(Err(_)) => Err("the download stopped before it started".into()),
         Err(_) => Err("the server took too long to answer".into()),
     };
+    // its size is known now when the browser didn't know it: a small one goes back to the browser
+    let outcome = match outcome {
+        Ok(()) if min > 0 && previous.is_none() && bridge.manager.get(&id).and_then(|d| d.record.size).is_some_and(|s| s < min) => {
+            bridge.manager.remove(std::slice::from_ref(&id), true);
+            return with_cors(origin, reject(left_small(min)));
+        }
+        other => other,
+    };
     match outcome {
         Ok(()) => {
             // a continued download (`adopt`) was confirmed when it was first added
@@ -191,6 +260,7 @@ async fn download(State(bridge): State<Bridge>, headers: HeaderMap, Json(req): J
             with_cors(origin, accept(id))
         }
         Err(reason) => {
+            declined(&reason);
             match previous {
                 // the browser keeps it; the earlier download stays as it was
                 Some(previous) => bridge.manager.restore(&id, previous, reason.clone()),
@@ -219,7 +289,7 @@ pub fn start_on(manager: Manager, runtime: &tokio::runtime::Handle, hooks: Hooks
         .method_not_allowed_fallback(|method: Method, headers: HeaderMap| async move {
             if method == Method::OPTIONS { preflight(headers).await } else { StatusCode::METHOD_NOT_ALLOWED.into_response() }
         })
-        .with_state(Bridge { manager, hooks });
+        .with_state(Bridge { manager, hooks, status: status.clone() });
 
     let reported = status.clone();
     runtime.spawn(async move {

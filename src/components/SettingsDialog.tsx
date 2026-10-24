@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { FolderOpenIcon } from "@hugeicons/core-free-icons";
+import { FolderOpenIcon, PuzzleIcon } from "@hugeicons/core-free-icons";
 import type { BridgeStatus, Settings } from "../api";
-import { api } from "../api";
+import { api, formatDate } from "../api";
+import { ExtensionSetup } from "./ExtensionSetup";
 import { Icon } from "./icons";
 import { Modal } from "./Modal";
 
@@ -36,37 +37,72 @@ function FolderField({ label, value, placeholder, onChange, hint }: { label: str
   );
 }
 
-function BrowserSection({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
+function BrowserSection({ s, set }: { s: Settings; set: <K extends keyof Settings>(key: K, value: Settings[K]) => void }) {
   const [status, setStatus] = useState<BridgeStatus | null>(null);
-  const [folder, setFolder] = useState("");
+  const [setup, setSetup] = useState(false);
   useEffect(() => {
     api.bridgeStatus().then(setStatus).catch(() => setStatus(null));
-  }, []);
-  const openFolder = () => api.openExtensionFolder().then(setFolder).catch((e) => setFolder(String(e)));
+  }, [setup]);
+  const seen = status?.extension_seen_ms ?? (s.extension_seen_ms || null);
+  const from = status?.extension_browser || s.extension_browser;
+  // the size limit in the unit it reads best in; the number stays when the unit changes
+  const [unit, setUnit] = useState<"MB" | "GB">(s.small_file_limit_mb >= 1024 && s.small_file_limit_mb % 1024 === 0 ? "GB" : "MB");
+  const factor = unit === "GB" ? 1024 : 1;
+  const amount = Math.max(1, Math.round(s.small_file_limit_mb / factor));
   return (
     <>
       <label className="check">
-        <input type="checkbox" checked={enabled} onChange={(e) => onChange(e.target.checked)} />
+        <input type="checkbox" checked={s.browser_integration} onChange={(e) => set("browser_integration", e.target.checked)} />
         <span>catch downloads from the browser extension</span>
       </label>
       <div className="bridge-status">
         <span className={`status-text ${status?.listening ? "status-completed" : "status-error"}`}>
-          {status?.listening ? `listening on 127.0.0.1:${status.port}` : status?.error ?? "not listening"}
+          {status?.listening ? `listening on 127.0.0.1:${status.port}` : (status?.error ?? "not listening")}
+        </span>
+        <span className="muted">
+          {" · "}
+          {seen ? `extension last checked in ${from ? `from ${from} ` : ""}${formatDate(seen)}` : "extension not set up yet"}
         </span>
       </div>
-      <ol className="steps">
-        <li>
-          open <code>chrome://extensions</code> (or edge://extensions) and turn on developer mode
-        </li>
-        <li>
-          click <b>load unpacked</b> and pick the extension folder{" "}
-          <button className="btn inline" onClick={openFolder}>
-            <Icon icon={FolderOpenIcon} size={13} /> open folder
-          </button>
-        </li>
-        <li>downloads in that browser now land here, with its cookies — protected sites included</li>
-      </ol>
-      {folder && <small className="selectable">{folder}</small>}
+      <div>
+        <button className="btn" onClick={() => setSetup(true)}>
+          <Icon icon={PuzzleIcon} size={14} /> set up the extension…
+        </button>
+      </div>
+      <label className="check">
+        <input type="checkbox" checked={s.ask_before_download} onChange={(e) => set("ask_before_download", e.target.checked)} />
+        <span>ask where to save each browser download (a "new download" window, like IDM's)</span>
+      </label>
+      <div className="check-line">
+        <label className="check">
+          <input type="checkbox" checked={s.leave_small_to_browser} onChange={(e) => set("leave_small_to_browser", e.target.checked)} />
+          <span>leave downloads smaller than</span>
+        </label>
+        <input
+          className="small-number"
+          type="number"
+          min={1}
+          value={amount}
+          disabled={!s.leave_small_to_browser}
+          onChange={(e) => set("small_file_limit_mb", Math.max(1, Math.round(+e.target.value || 1)) * factor)}
+          aria-label="size"
+        />
+        <select
+          value={unit}
+          disabled={!s.leave_small_to_browser}
+          onChange={(e) => {
+            const next = e.target.value as "MB" | "GB";
+            setUnit(next);
+            set("small_file_limit_mb", amount * (next === "GB" ? 1024 : 1));
+          }}
+          aria-label="unit"
+        >
+          <option>MB</option>
+          <option>GB</option>
+        </select>
+        <span className={s.leave_small_to_browser ? "" : "muted"}>to the browser</span>
+      </div>
+      {setup && <ExtensionSetup settings={s} onClose={() => setSetup(false)} />}
     </>
   );
 }
@@ -125,11 +161,7 @@ export function SettingsDialog({ settings, onSave, onClose }: Props) {
         </label>
 
         <h3>03 · browser</h3>
-        <BrowserSection enabled={s.browser_integration} onChange={(v) => set("browser_integration", v)} />
-        <label className="check">
-          <input type="checkbox" checked={s.ask_before_download} onChange={(e) => set("ask_before_download", e.target.checked)} />
-          <span>ask where to save each browser download (a "new download" window, like IDM's)</span>
-        </label>
+        <BrowserSection s={s} set={set} />
 
         <h3>04 · behaviour</h3>
         <label className="check">
