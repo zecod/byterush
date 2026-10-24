@@ -7,7 +7,7 @@ use super::{Ctx, Job, Saver};
 use anyhow::{Context, anyhow, bail};
 use futures_util::StreamExt;
 use reqwest::StatusCode;
-use reqwest::header::{CONTENT_DISPOSITION, CONTENT_RANGE, CONTENT_TYPE, ETAG, HeaderMap, LAST_MODIFIED, RANGE, REFERER};
+use reqwest::header::{CONTENT_DISPOSITION, CONTENT_RANGE, CONTENT_TYPE, ETAG, HeaderMap, LAST_MODIFIED, RANGE, REFERER, RETRY_AFTER};
 use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
@@ -150,13 +150,47 @@ fn get(client: &reqwest::Client, url: &str, headers: &[(String, String)]) -> req
 /// The first request of a download. Hotlink protection refuses requests that don't come from one
 /// of the site's pages: with no Referer to replay, a 403 is retried once as if coming from the
 /// site's home page. Returns the response and the Referer that made it work, if one was needed.
+/// How often the first request is asked again after a busy answer or a failed connection.
+const FIRST_RETRIES: u32 = 2;
+
+/// Answers a busy server gives for a moment: asking again shortly often works.
+fn busy(status: StatusCode) -> bool {
+    matches!(status.as_u16(), 429 | 502 | 503 | 504)
+}
+
+/// How long to wait before asking again: the server's Retry-After (in seconds) when it gives one,
+/// else a short beat; never more than 3 s, as a browser hand-over waits for this answer.
+fn retry_after(resp: Option<&reqwest::Response>, attempt: u32) -> Duration {
+    let asked = resp
+        .and_then(|r| r.headers().get(RETRY_AFTER))
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .map(Duration::from_secs);
+    asked.unwrap_or(Duration::from_millis(400 * u64::from(attempt + 1))).min(Duration::from_secs(3))
+}
+
 async fn send_first(
     client: &reqwest::Client,
     url: &str,
     headers: &[(String, String)],
     range: &str,
 ) -> anyhow::Result<(reqwest::Response, Option<String>)> {
-    let resp = get(client, url, headers).header(RANGE, range).send().await?;
+    // a moment of "too many requests", a gateway hiccup or a refused connection shouldn't decide
+    // the download (for a browser hand-over it would mean the browser keeps it)
+    let mut attempt = 0;
+    let resp = loop {
+        let sent = get(client, url, headers).header(RANGE, range).send().await;
+        let wait = match &sent {
+            Ok(resp) if busy(resp.status()) => retry_after(Some(resp), attempt),
+            Err(e) if e.is_connect() => retry_after(None, attempt),
+            _ => break sent?,
+        };
+        if attempt == FIRST_RETRIES {
+            break sent?;
+        }
+        tokio::time::sleep(wait).await;
+        attempt += 1;
+    };
     let has_referer = headers.iter().any(|(k, _)| k.eq_ignore_ascii_case("referer"));
     if resp.status() != StatusCode::FORBIDDEN || has_referer {
         return Ok((resp, None));
