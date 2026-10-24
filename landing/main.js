@@ -940,69 +940,6 @@ function applyDownloads(d, release) {
   Promise.all([refine(d), latestRelease()]).then(([dd, release]) => applyDownloads(dd, release));
 }
 
-/* ---------- video: nothing is downloaded until someone presses play ---------- */
-
-function showVideoErrors(video, msg) {
-  const fail = () => (msg.hidden = false);
-  video.addEventListener("error", fail);
-  video.querySelectorAll("source").forEach((s) => s.addEventListener("error", fail));
-}
-
-{
-  const video = $("[data-player-video]");
-  const play = $("[data-player-play]");
-  const msg = $("[data-player-msg]");
-  showVideoErrors(video, msg);
-  play.hidden = false;
-  video.controls = false;
-  play.addEventListener("click", () => {
-    play.hidden = true;
-    video.controls = true;
-    video.play().catch(() => {});
-    video.focus();
-  });
-  video.addEventListener("play", () => {
-    play.hidden = true;
-    video.controls = true;
-  });
-}
-
-// the intro opens in a modal player; without <dialog> support the link simply opens the file
-{
-  const trigger = $("[data-intro]");
-  const dialog = $("[data-lightbox]");
-  const video = $("[data-lb-video]");
-  const msg = $("[data-lb-msg]");
-  if (dialog && typeof dialog.showModal === "function") {
-    showVideoErrors(video, msg);
-    trigger.setAttribute("role", "button");
-    trigger.setAttribute("aria-haspopup", "dialog");
-    trigger.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (!video.getAttribute("src")) {
-        // H.264 where the browser has it (everywhere but some open-source Chromium builds), else VP9
-        const mp4 = trigger.getAttribute("href");
-        video.src = video.canPlayType('video/mp4; codecs="avc1.640028"') ? mp4 : mp4.replace(/\.mp4$/, ".webm");
-      }
-      msg.hidden = !video.error;
-      dialog.showModal();
-      video.play().catch(() => {});
-    });
-    trigger.addEventListener("keydown", (e) => {
-      if (e.key === " ") {
-        e.preventDefault();
-        trigger.click();
-      }
-    });
-    $("[data-lb-close]").addEventListener("click", () => dialog.close());
-    dialog.addEventListener("click", (e) => e.target === dialog && dialog.close()); // the backdrop
-    dialog.addEventListener("close", () => {
-      video.pause();
-      trigger.focus();
-    });
-  }
-}
-
 /* ---------- screenshots: light and dark ---------- */
 
 {

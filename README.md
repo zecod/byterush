@@ -27,11 +27,9 @@
 </p>
 
 <p align="center">
-  <a href="https://zecod.github.io/byterush/#demo">
+  <a href="https://zecod.github.io/byterush/#speed">
     <img src="docs/media/demo.gif" width="860" alt="A race replayed from a real recording: the same 961 MB file from archive.org over one connection, the way a browser downloads, and with Byterush over 32 connections. Byterush finishes in 14.2 seconds while one connection is at 16 percent; one connection takes 6 minutes 52 seconds, 29.1 times longer.">
   </a>
-  <br>
-  <sub>▶ <a href="https://zecod.github.io/byterush/#demo">Watch the one-minute demo</a> · <a href="https://zecod.github.io/byterush/#top">the 49-second intro</a></sub>
 </p>
 
 ## Why Byterush

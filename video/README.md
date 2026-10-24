@@ -1,6 +1,6 @@
 # Byterush videos
 
-The intro (49 s) and the one-minute demo on the [website](https://zecod.github.io/byterush/), and the GIF at the top of the main README. They are written in React with [Remotion](https://www.remotion.dev/).
+An intro (49 s), a one-minute demo, and the GIF at the top of the main README, which is cut from the intro. The videos are not on the website. They are written in React with [Remotion](https://www.remotion.dev/).
 
 Nothing in them is invented. Every progress bar, speed, connection and segment is replayed from a **recording of a real download** made with Byterush's own engine (`public/telemetry/*.json`), and the app window is drawn with the app's real components and stylesheet (`../src`), so the videos show what the app actually does.
 
@@ -36,7 +36,7 @@ npm run publish            # both videos
 npm run publish -- demo    # or only one: intro (which also makes the GIF) or demo
 ```
 
-Renders the videos and writes the site's `landing/assets/video/{intro,demo}.{mp4,webm,jpg}` (H.264, plus VP9 for browsers without H.264) and `docs/media/demo.gif`. It needs a system `ffmpeg` with libx264 and libvpx-vp9. `REMOTION_BROWSER` may point at a Chrome Headless Shell to render with.
+Renders the videos to `out/{intro,demo}.{mp4,webm,jpg}` (H.264, VP9 and a poster) and writes `docs/media/demo.gif`. It needs a system `ffmpeg` with libx264 and libvpx-vp9. `REMOTION_BROWSER` may point at a Chrome Headless Shell to render with.
 
 ## License
 

@@ -6,7 +6,7 @@ Pushing to `main` publishes it to GitHub Pages through `.github/workflows/pages.
 
 - Layout follows opencode.ai's: one bordered 1080 px column, IBM Plex Mono, black and white with the brand's pale lime for a few highlights, light and dark from the system setting.
 - IBM Plex Mono is served from `assets/fonts/`. The only request to another site is the GitHub API call for the latest release; there are no analytics or CDNs.
-- Sections: hero (with speed lanes and the intro video), the app window (Fig 1), see it in action (demo video and light/dark screenshots), speed tests (Fig 2), features as illustrated tiles, how the split works (Fig 3), browser extension (Fig 4), comparison with a browser download, downloads per platform, FAQ.
+- Sections: hero (with speed lanes), the app window (Fig 1), the app in light and dark (screenshots), speed tests (Fig 2), features as illustrated tiles, how the split works (Fig 3), browser extension (Fig 4), comparison with a browser download, downloads per platform, FAQ.
 - The feature illustrations are inline SVG animated with CSS. They pause off screen and hold still under `prefers-reduced-motion`.
 
 ## Speed numbers
@@ -15,13 +15,7 @@ Pushing to `main` publishes it to GitHub Pages through `.github/workflows/pages.
 
 ## Media
 
-These files are referenced by the page:
-
-- `assets/video/intro.{mp4,webm}` and its poster `assets/video/intro.jpg`: the intro, opened from the hero in a modal player.
-- `assets/video/demo.{mp4,webm}` and its poster `assets/video/demo.jpg`: the product demo, played inline.
-- `assets/screens/app-dark.webp` and `assets/screens/app-light.webp`: the app window, 2480×1560.
-
-The videos are made in [`../video`](../video/README.md); `npm run publish` there renders them and writes these files. They are 1920×1080 H.264 MP4, with VP9 WebM for browsers without H.264 (some open-source Chromium builds). No video bytes load until someone presses play; if a file is missing the player says so.
+`assets/screens/app-dark.webp` and `assets/screens/app-light.webp` are the app window, 2480×1560, shown in the light and dark section. Everything else on the page is drawn with HTML, CSS and inline SVG.
 
 ## Download buttons
 
