@@ -3,7 +3,7 @@ pub mod engine;
 
 use engine::{AddRequest, Confirmation, DiskSpace, DownloadView, Manager, ProbeInfo, Settings};
 use serde::Serialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -38,8 +38,18 @@ struct Captured {
     waiting: bool,
 }
 
-/// Label of the "New download" window of a download.
-const CONFIRM_PREFIX: &str = "confirm-";
+/// Label of the "New download" window.
+const ASK_WINDOW: &str = "confirm";
+
+/// Browser hand-overs waiting for the user. The "New download" window asks about one at a time:
+/// `current` is the one it shows, `queue` the ones after it.
+#[derive(Default)]
+struct Asking {
+    current: Option<String>,
+    queue: VecDeque<String>,
+}
+
+type AskState = Mutex<Asking>;
 
 #[tauri::command(async)]
 fn bridge_status(state: State<'_, BridgeState>) -> bridge::BridgeStatus {
@@ -106,16 +116,20 @@ fn resume_downloads(manager: State<'_, Manager>, ids: Vec<String>) {
 }
 
 #[tauri::command(async)]
-fn remove_downloads(manager: State<'_, Manager>, ids: Vec<String>, delete_files: bool) {
+fn remove_downloads(app: AppHandle, manager: State<'_, Manager>, ids: Vec<String>, delete_files: bool) {
     manager.remove(&ids, delete_files);
+    for id in &ids {
+        asked(&app, id);
+    }
 }
 
-/// The answer from a "New download" window. Starting brings the main window forward with the
-/// download in it, the way a download manager shows its progress.
+/// The answer from the "New download" window: start (which brings the main window forward with
+/// the download in it, the way a download manager shows its progress) or keep it for later.
 #[tauri::command(async)]
 fn confirm_download(app: AppHandle, manager: State<'_, Manager>, id: String, choice: Confirmation) -> Result<String, String> {
     let start = choice.start;
     let file_name = manager.confirm(&id, choice)?;
+    asked(&app, &id);
     if start && let Some(window) = app.get_webview_window("main") {
         let _ = window.unminimize();
         let _ = window.show();
@@ -124,47 +138,128 @@ fn confirm_download(app: AppHandle, manager: State<'_, Manager>, id: String, cho
     Ok(file_name)
 }
 
+/// "Cancel" in the "New download" window: the download and anything it wrote are dropped.
+#[tauri::command(async)]
+fn cancel_download(app: AppHandle, manager: State<'_, Manager>, id: String) {
+    manager.remove(std::slice::from_ref(&id), true);
+    asked(&app, &id);
+}
+
+/// The download the "New download" window should show now, if any.
+#[tauri::command(async)]
+fn asking_now(asking: State<'_, AskState>) -> Option<String> {
+    asking.lock().unwrap().current.clone()
+}
+
+/// Show the "New download" window again for a download waiting for an answer (from the main window).
+#[tauri::command(async)]
+fn ask_download(app: AppHandle, id: String) {
+    ask(&app, &id, true);
+}
+
 #[tauri::command(async)]
 fn disk_space(dir: String) -> Option<DiskSpace> {
     engine::disk_space(std::path::Path::new(&dir))
 }
 
-/// Ask the user about a download the browser handed over, IDM style: a small window on top of the
-/// browser with its name, size, folder and the room left on that drive. It holds the download
-/// until answered (see `Manager::confirm`); closing it keeps the download paused for later.
-fn open_confirm_window(app: &AppHandle, id: &str) {
-    let label = format!("{CONFIRM_PREFIX}{id}");
-    if let Some(window) = app.get_webview_window(&label) {
-        let _ = window.set_focus();
-        return;
-    }
-    // the window learns which download it is about from its label
-    let built = tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::default())
+/// The "New download" window, IDM style: a small window on top of the browser with the file's
+/// name, size, folder and the room left on that drive. It is created hidden when the app starts
+/// and reused, so it shows at once (a new web view takes a second or more to start).
+fn build_ask_window(app: &AppHandle) -> tauri::Result<tauri::WebviewWindow> {
+    tauri::WebviewWindowBuilder::new(app, ASK_WINDOW, tauri::WebviewUrl::default())
         .title("New download · Byterush")
-        .inner_size(620.0, 452.0)
-        .resizable(false)
+        // its content's height (the font ships with the app, so it is the same everywhere). Not
+        // "resizable(false)": on Linux that pins the window to a height GTK picks instead.
+        .inner_size(620.0, 400.0)
+        .min_inner_size(520.0, 360.0)
         .maximizable(false)
         .minimizable(false)
         .always_on_top(true)
+        .skip_taskbar(false)
         .center()
-        .focused(true)
-        // shown by the UI once drawn, like the main window
         .visible(false)
-        .build();
-    match built {
-        Ok(window) => {
+        .build()
+}
+
+/// Ask the user about a download that waits for an answer (see `Manager::confirm`): show it in the
+/// "New download" window now, or after the one shown there. `first` puts it before the others.
+fn ask(app: &AppHandle, id: &str, first: bool) {
+    let show = {
+        let state = app.state::<AskState>();
+        let mut asking = state.lock().unwrap();
+        if asking.current.as_deref() == Some(id) {
+            true
+        } else {
+            asking.queue.retain(|q| q != id);
+            if first {
+                asking.queue.push_front(id.to_string());
+            } else {
+                asking.queue.push_back(id.to_string());
+            }
+            asking.current.is_none()
+        }
+    };
+    if show {
+        show_next(app);
+    }
+}
+
+/// Show the current download in the window, or move on to the next one waiting.
+fn show_next(app: &AppHandle) {
+    let id = {
+        let state = app.state::<AskState>();
+        let mut asking = state.lock().unwrap();
+        if asking.current.is_none() {
+            asking.current = asking.queue.pop_front();
+        }
+        asking.current.clone()
+    };
+    let Some(id) = id else {
+        if let Some(window) = app.get_webview_window(ASK_WINDOW) {
+            let _ = window.hide();
+        }
+        return;
+    };
+    // not made at startup yet, or that failed: make it now (it asks for the current one when loaded)
+    let window = app.get_webview_window(ASK_WINDOW).or_else(|| build_ask_window(app).ok()).or_else(|| app.get_webview_window(ASK_WINDOW));
+    match window {
+        // the window loads the download, then shows itself; should its page fail to, show it anyway
+        Some(window) => {
+            let _ = window.emit_to(ASK_WINDOW, "ask", &id);
+            let app = app.clone();
             std::thread::spawn(move || {
                 std::thread::sleep(Duration::from_millis(1500));
-                if !window.is_visible().unwrap_or(true) {
+                let still = app.state::<AskState>().lock().unwrap().current.as_deref() == Some(id.as_str());
+                if still && !window.is_visible().unwrap_or(true) {
                     let _ = window.show();
                     let _ = window.set_focus();
                 }
             });
         }
-        // no window to ask in: don't keep the download waiting
-        Err(_) => {
-            let _ = app.state::<Manager>().confirm(id, Confirmation { start: true, ..Default::default() });
+        // nowhere to ask: don't keep the download waiting
+        None => {
+            let _ = app.state::<Manager>().confirm(&id, Confirmation { start: true, ..Default::default() });
+            asked(app, &id);
         }
+    }
+}
+
+/// The user answered about `id` (or it is gone): ask about the next one, or hide the window.
+fn asked(app: &AppHandle, id: &str) {
+    let next = {
+        let state = app.state::<AskState>();
+        let mut asking = state.lock().unwrap();
+        asking.queue.retain(|q| q != id);
+        if asking.current.as_deref() != Some(id) {
+            return;
+        }
+        asking.current = None;
+        !asking.queue.is_empty()
+    };
+    if next {
+        show_next(app);
+    } else if let Some(window) = app.get_webview_window(ASK_WINDOW) {
+        let _ = window.hide();
     }
 }
 
@@ -288,12 +383,24 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        // a "New download" window closed without an answer keeps its download, paused for later
+        // closing the "New download" window keeps its download, paused for later; the window itself
+        // stays, hidden, for the next one
         .on_window_event(|window, event| {
-            if let WindowEvent::Destroyed = event
-                && let Some(id) = window.label().strip_prefix(CONFIRM_PREFIX)
+            if let WindowEvent::CloseRequested { api, .. } = event
+                && window.label() == ASK_WINDOW
             {
-                let _ = window.state::<Manager>().confirm(id, Confirmation::default());
+                api.prevent_close();
+                let app = window.app_handle();
+                let current = app.state::<AskState>().lock().unwrap().current.clone();
+                match current {
+                    Some(id) => {
+                        let _ = app.state::<Manager>().confirm(&id, Confirmation::default());
+                        asked(app, &id);
+                    }
+                    None => {
+                        let _ = window.hide();
+                    }
+                }
             }
         })
         .setup(|app| {
@@ -307,17 +414,22 @@ pub fn run() {
             let resync = Resync::default();
             spawn_progress_loop(app.handle().clone(), manager.clone(), resync.0.clone());
             app.manage(resync);
+            app.manage(AskState::default());
 
-            // tell the UI about taken-over downloads; one that waits for the user gets its "New
-            // download" window, the others flash the taskbar instead of stealing focus
+            // tell the UI about taken-over downloads; one that waits for the user is shown in the "New
+            // download" window, the others flash the taskbar instead of stealing focus. Off the
+            // bridge's request, which answers the browser right away whatever the windows do.
             let handle = app.handle().clone();
             let on_captured: bridge::OnCaptured = Arc::new(move |id: &str, source: &str, waiting: bool| {
-                let _ = handle.emit("browser-captured", Captured { id: id.into(), source: source.into(), waiting });
-                if waiting {
-                    open_confirm_window(&handle, id);
-                } else if let Some(window) = handle.get_webview_window("main") {
-                    let _ = window.request_user_attention(Some(tauri::UserAttentionType::Informational));
-                }
+                let (handle, id) = (handle.clone(), id.to_string());
+                let _ = handle.emit("browser-captured", Captured { id: id.clone(), source: source.into(), waiting });
+                std::thread::spawn(move || {
+                    if waiting {
+                        ask(&handle, &id, false);
+                    } else if let Some(window) = handle.get_webview_window("main") {
+                        let _ = window.request_user_attention(Some(tauri::UserAttentionType::Informational));
+                    }
+                });
             });
             let runtime = tauri::async_runtime::block_on(async { tokio::runtime::Handle::current() });
             let status = bridge::start(manager.clone(), &runtime, bridge::Hooks { on_captured, can_ask: true });
@@ -335,6 +447,15 @@ pub fn run() {
                     let _ = window.show();
                 }
             });
+            // the "New download" window starts in the background once the main one is up, so it
+            // shows at once when the browser hands a download over
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(1500));
+                if handle.get_webview_window(ASK_WINDOW).is_none() {
+                    let _ = build_ask_window(&handle);
+                }
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -348,6 +469,9 @@ pub fn run() {
             resume_downloads,
             remove_downloads,
             confirm_download,
+            cancel_download,
+            asking_now,
+            ask_download,
             disk_space,
             get_settings,
             save_settings,

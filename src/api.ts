@@ -117,6 +117,12 @@ export const api = {
   openExtensionFolder: () => invoke<string>("open_extension_folder"),
   /** Returns the file name the download got (" (1)" added when the folder has that name). */
   confirm: (id: string, choice: Confirmation) => invoke<string>("confirm_download", { id, choice }),
+  /** "Cancel" in the "New download" window: drop the download and what it wrote. */
+  cancelAsked: (id: string) => invoke<void>("cancel_download", { id }),
+  /** The download the "New download" window should show now. */
+  askingNow: () => invoke<string | null>("asking_now"),
+  /** Show the "New download" window again for a download waiting for an answer. */
+  ask: (id: string) => invoke<void>("ask_download", { id }),
   diskSpace: (dir: string) => invoke<DiskSpace | null>("disk_space", { dir }),
 };
 

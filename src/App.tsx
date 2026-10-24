@@ -229,6 +229,7 @@ export default function App() {
 
   const activate = (d: Download) => {
     if (d.status === "completed") api.open(d.id).catch(fail);
+    else if (d.status === "waiting") api.ask(d.id).catch(fail);
     else if (isActive(d.status) || isPending(d.status)) api.pause([d.id]);
     else api.resume([d.id]);
   };
