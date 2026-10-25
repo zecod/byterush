@@ -407,13 +407,14 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "byterush"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "arboard",
  "axum",
  "fs4",
  "futures-util",
+ "libc",
  "percent-encoding",
  "reqwest 0.12.28",
  "serde",

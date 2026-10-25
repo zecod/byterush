@@ -39,12 +39,12 @@ const BENCHES = [
     server: "Hetzner Helsinki",
     date: "2026-10-24",
     runs: [
-      { label: "Chrome", connections: 1, seconds: 543.9 },
-      { label: "Byterush app · 16 connections", connections: 16, seconds: 59.5 },
+      { label: "Chrome", connections: 1, seconds: 573.5 },
+      { label: "Byterush app · 16 connections", connections: 16, seconds: 55.1 },
     ],
     note:
       "Chrome against the Byterush app, from the screen recordings in the demo video, both timed from the click; Byterush's time includes about 4 s in its New download window. " +
-      "It downloaded at the recording machine's disk speed (about 190 MB/s), so a faster disk finishes sooner. One run each.",
+      "It downloaded at the recording machine's disk speed (about 210 MB/s), so a faster disk finishes sooner. One run each.",
   },
   {
     id: "10gb-falkenstein",
@@ -54,12 +54,12 @@ const BENCHES = [
     server: "Hetzner Falkenstein",
     date: "2026-10-24",
     runs: [
-      { label: "Chrome", connections: 1, seconds: 299.1 },
-      { label: "Byterush app · 16 connections", connections: 16, seconds: 54.9 },
+      { label: "Chrome", connections: 1, seconds: 336.9 },
+      { label: "Byterush app · 16 connections", connections: 16, seconds: 50.1 },
     ],
     note:
       "Chrome against the Byterush app, from the screen recordings in the demo video, both timed from the click; Byterush's time includes about 4 s in its New download window. " +
-      "Closer than Helsinki, so one connection is faster; Byterush again downloaded at the recording machine's disk speed (about 210 MB/s). One run each.",
+      "Closer than Helsinki, so one connection is faster; Byterush again downloaded at the recording machine's disk speed (about 230 MB/s). One run each.",
   },
   {
     id: "3-6gb",

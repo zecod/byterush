@@ -77,8 +77,10 @@ impl Job {
 }
 
 /// Reports whether a download's first response matched what the browser was getting.
-type VerdictSender = tokio::sync::oneshot::Sender<Result<(), String>>;
-pub type Verdict = tokio::sync::oneshot::Receiver<Result<(), String>>;
+/// Whether the first response matched what the browser expected; on a match, the size the server
+/// reported (the browser may not have known it), so the bridge needn't read the record for it.
+type VerdictSender = tokio::sync::oneshot::Sender<Result<Option<u64>, String>>;
+pub type Verdict = tokio::sync::oneshot::Receiver<Result<Option<u64>, String>>;
 
 #[derive(Default)]
 pub(crate) struct Runtime {

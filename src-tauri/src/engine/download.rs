@@ -14,6 +14,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use tokio::sync::{mpsc, oneshot};
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 
@@ -266,7 +267,7 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
         let check = mismatch(&opened, &expect);
         let _ = tx.send(match &check {
             Some(reason) => Err(reason.clone()),
-            None => Ok(()),
+            None => Ok(opened.size),
         });
         if let Some(reason) = check {
             bail!(reason);
@@ -364,7 +365,7 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
     if fresh {
         remove_part_files(&part);
     }
-    let sink = Arc::new(match layout {
+    let store = match layout {
         Layout::Single => {
             let file = OpenOptions::new()
                 .create(true)
@@ -373,13 +374,13 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
                 .open(&part)
                 .with_context(|| format!("cannot open {}", part.display()))?;
             if fresh && let Some(size) = size {
-                mark_sparse(&file);
-                file.set_len(size)?;
+                preallocate(&file, size).with_context(|| format!("cannot reserve {size} bytes for {}", part.display()))?;
             }
-            Sink::Single(file)
+            Store::Single(Arc::new(file))
         }
-        Layout::Parts => Sink::Parts(Parts::new(part.clone())),
-    });
+        Layout::Parts => Store::Parts(Arc::new(Parts::new(part.clone()))),
+    };
+    let sink = Arc::new(Sink::new(store, connections));
     if cancel.is_cancelled() {
         return Ok(());
     }
@@ -443,14 +444,15 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
     let finish_job = job.clone();
     let destination = final_path.clone();
     tokio::task::spawn_blocking(move || -> anyhow::Result<()> {
-        match Arc::try_unwrap(sink).map_err(|_| anyhow!("file still in use"))? {
-            Sink::Single(file) => {
+        let sink = Arc::try_unwrap(sink).map_err(|_| anyhow!("file still in use"))?;
+        match sink.close() {
+            Store::Single(file) => {
                 // no sync_all: forcing gigabytes out of the write cache took seconds and protects
                 // nothing a rename on the same volume needs; a copy to another drive syncs itself
                 drop(file);
                 move_file(&finish_job, &part, &destination)
             }
-            Sink::Parts(parts) => {
+            Store::Parts(parts) => {
                 let base = parts.base.clone();
                 drop(parts); // close every part before reading them back
                 rebuild(&finish_job, &base, &destination)
@@ -715,17 +717,17 @@ async fn fetch_once(
     }
 
     let mut stream = resp.bytes_stream();
-    let mut pending = Pending::new();
+    let mut pending = Pending::new(start);
     loop {
         let next = tokio::select! {
             c = stream.next() => c,
             _ = cancel.cancelled() => {
-                pending.flush(job, file, idx).await?;
+                pending.finish(job, file, idx).await?;
                 return Ok(false);
             }
         };
         let Some(chunk) = next else {
-            pending.flush(job, file, idx).await?;
+            pending.finish(job, file, idx).await?;
             let mut r = job.rec.lock().unwrap();
             let seg = &mut r.segments[idx];
             if seg.end == u64::MAX {
@@ -736,7 +738,7 @@ async fn fetch_once(
         let chunk = match chunk {
             Ok(c) => c,
             Err(e) => {
-                pending.flush(job, file, idx).await?;
+                pending.finish(job, file, idx).await?;
                 return Err(e.into());
             }
         };
@@ -744,45 +746,52 @@ async fn fetch_once(
         tokio::select! {
             _ = ctx.limiter.acquire(chunk.len()) => {}
             _ = cancel.cancelled() => {
-                pending.flush(job, file, idx).await?;
+                pending.finish(job, file, idx).await?;
                 return Ok(false);
             }
         }
         // the segment may have shrunk because another connection took over its tail
-        let take = {
-            let r = job.rec.lock().unwrap();
-            let seg = &r.segments[idx];
-            let at = seg.pos() + pending.buf.len() as u64;
-            if pending.buf.is_empty() {
-                pending.offset = at;
-            }
-            seg.end.saturating_sub(at).min(chunk.len() as u64) as usize
-        };
+        let end = job.rec.lock().unwrap().segments[idx].end;
+        let at = pending.next + pending.buf.len() as u64;
+        let take = end.saturating_sub(at).min(chunk.len() as u64) as usize;
         pending.buf.extend_from_slice(&chunk[..take]);
-        let segment_full = take < chunk.len();
-        if segment_full || pending.due() {
-            pending.flush(job, file, idx).await?;
-        }
-        if segment_full || job.rec.lock().unwrap().segments[idx].remaining() == 0 {
+        if take < chunk.len() || at + take as u64 >= end {
+            pending.finish(job, file, idx).await?;
             return Ok(true);
+        }
+        if pending.due() {
+            pending.flush(job, file, idx).await?;
         }
     }
 }
 
-/// Bytes received by one connection but not yet on disk. Writing happens off the async threads
-/// and outside the record lock: on Windows the first write far into a new file can take long
-/// (the file system zero-fills up to it), and nothing else may wait on that.
+/// Bytes received by one connection on their way to disk. A full buffer goes to the download's
+/// writer thread and the connection reads on into another; the write is only waited for when the
+/// next buffer is full (or the segment ends), so a write is always under way while bytes keep
+/// arriving, and a slow disk never stops a connection from reading. The segment's progress counts
+/// a buffer once it is written: after a crash the state never claims bytes the disk doesn't have.
 struct Pending {
-    offset: u64,
+    /// Where the next byte to buffer goes in the file.
+    next: u64,
     buf: Vec<u8>,
+    /// The emptied buffer of the last finished write, to fill next.
+    spare: Option<Vec<u8>>,
+    inflight: Option<Inflight>,
     last_flush: std::time::Instant,
+}
+
+/// A write under way: where it goes, how long it is, and where its result arrives.
+struct Inflight {
+    offset: u64,
+    len: u64,
+    done: oneshot::Receiver<std::io::Result<Vec<u8>>>,
 }
 
 impl Pending {
     const FLUSH_BYTES: usize = 512 * 1024;
 
-    fn new() -> Self {
-        Self { offset: 0, buf: Vec::with_capacity(Self::FLUSH_BYTES), last_flush: std::time::Instant::now() }
+    fn new(next: u64) -> Self {
+        Self { next, buf: Vec::with_capacity(Self::FLUSH_BYTES), spare: None, inflight: None, last_flush: std::time::Instant::now() }
     }
 
     /// Flush by size, or often enough that progress keeps moving on slow connections.
@@ -790,7 +799,23 @@ impl Pending {
         self.buf.len() >= Self::FLUSH_BYTES || self.last_flush.elapsed() >= Duration::from_millis(250)
     }
 
-    async fn flush(&mut self, job: &Job, sink: &Arc<Sink>, idx: usize) -> anyhow::Result<()> {
+    /// Wait for the write under way and count its bytes as downloaded.
+    async fn settle(&mut self, job: &Job, idx: usize) -> anyhow::Result<()> {
+        let Some(Inflight { offset, len, done }) = self.inflight.take() else { return Ok(()) };
+        let buf = done.await.map_err(|_| anyhow!("the disk writer stopped"))??;
+        self.spare = Some(buf);
+        let mut r = job.rec.lock().unwrap();
+        let seg = &mut r.segments[idx];
+        // count only what still belongs to this segment (its tail may have been taken over);
+        // anything written past it is the same server data the other connection writes too
+        if seg.pos() == offset {
+            seg.downloaded += len.min(seg.end.saturating_sub(offset));
+        }
+        Ok(())
+    }
+
+    /// Hand the buffered bytes to the writer, once the previous write is done.
+    async fn flush(&mut self, job: &Job, sink: &Sink, idx: usize) -> anyhow::Result<()> {
         let since = std::mem::replace(&mut self.last_flush, std::time::Instant::now()).elapsed().as_secs_f64();
         if self.buf.is_empty() {
             return Ok(());
@@ -803,25 +828,88 @@ impl Pending {
             seg.rate = if seg.rate == 0 { inst as u64 } else { (0.7 * seg.rate as f64 + 0.3 * inst) as u64 };
             seg.rate_at = Some(std::time::Instant::now());
         }
-        let buf = std::mem::replace(&mut self.buf, Vec::with_capacity(Self::FLUSH_BYTES));
-        let start = job.rec.lock().unwrap().segments[idx].start;
-        let (offset, len, sink) = (self.offset, buf.len() as u64, sink.clone());
-        tokio::task::spawn_blocking(move || sink.write(idx, start, offset, &buf)).await??;
-        let mut r = job.rec.lock().unwrap();
-        let seg = &mut r.segments[idx];
-        // count only what still belongs to this segment (its tail may have been taken over);
-        // anything written past it is the same server data the other connection writes too
-        if seg.pos() == offset {
-            seg.downloaded += len.min(seg.end.saturating_sub(offset));
-        }
+        self.settle(job, idx).await?;
+        let buf = std::mem::replace(&mut self.buf, self.spare.take().unwrap_or_else(|| Vec::with_capacity(Self::FLUSH_BYTES)));
+        let (offset, len) = (self.next, buf.len() as u64);
+        let seg_start = job.rec.lock().unwrap().segments[idx].start;
+        let (done, result) = oneshot::channel();
+        sink.enqueue(WriteReq { idx, seg_start, offset, buf, done }).await?;
+        self.inflight = Some(Inflight { offset, len, done: result });
+        self.next += len;
         Ok(())
+    }
+
+    /// Everything received so far is written and counted.
+    async fn finish(&mut self, job: &Job, sink: &Sink, idx: usize) -> anyhow::Result<()> {
+        self.flush(job, sink, idx).await?;
+        self.settle(job, idx).await
     }
 }
 
-/// Where a download's bytes go while it runs.
-pub(crate) enum Sink {
-    Single(File),
-    Parts(Parts),
+/// Where a download's bytes go while it runs: one writer thread does every write. Connections hand
+/// it full buffers and read on, and get the buffers back to fill again. With every connection
+/// writing for itself, sixteen threads queued on the one file's lock (writes of half a megabyte
+/// waited 15 ms each) and every flush took a fresh buffer, which the kernel had to zero.
+pub(crate) struct Sink {
+    store: Store,
+    queue: mpsc::Sender<WriteReq>,
+    writer: Mutex<Option<std::thread::JoinHandle<()>>>,
+}
+
+#[derive(Clone)]
+pub(crate) enum Store {
+    Single(Arc<File>),
+    Parts(Arc<Parts>),
+}
+
+struct WriteReq {
+    idx: usize,
+    seg_start: u64,
+    offset: u64,
+    buf: Vec<u8>,
+    /// The buffer comes back, emptied, once it is written.
+    done: oneshot::Sender<std::io::Result<Vec<u8>>>,
+}
+
+impl Sink {
+    fn new(store: Store, connections: u8) -> Self {
+        // a couple of buffers per connection may wait: enough to keep the writer busy, while a disk
+        // slower than the network holds the connections back instead of buffering without bound
+        let (queue, mut requests) = mpsc::channel::<WriteReq>(2 * connections.max(1) as usize);
+        let target = store.clone();
+        let writer = std::thread::Builder::new()
+            .name("byterush-writer".into())
+            .spawn(move || {
+                while let Some(WriteReq { idx, seg_start, offset, mut buf, done }) = requests.blocking_recv() {
+                    let result = target.write(idx, seg_start, offset, &buf).map(|()| {
+                        buf.clear();
+                        buf
+                    });
+                    let _ = done.send(result);
+                }
+            })
+            .expect("writer thread");
+        Self { store, queue, writer: Mutex::new(Some(writer)) }
+    }
+
+    async fn enqueue(&self, req: WriteReq) -> anyhow::Result<()> {
+        self.queue.send(req).await.map_err(|_| anyhow!("the disk writer stopped"))
+    }
+
+    /// Make everything written so far durable.
+    fn sync(&self) -> std::io::Result<()> {
+        self.store.sync()
+    }
+
+    /// Finish the queued writes and stop the writer; the files stay open in the store.
+    fn close(self) -> Store {
+        let Sink { store, queue, writer } = self;
+        drop(queue);
+        if let Some(writer) = writer.into_inner().unwrap_or_else(|poisoned| poisoned.into_inner()) {
+            let _ = writer.join();
+        }
+        store
+    }
 }
 
 /// One file per segment (`<base>.<i>`), each opened once and kept open while the download runs.
@@ -844,19 +932,18 @@ impl Parts {
     }
 }
 
-impl Sink {
+impl Store {
     fn write(&self, idx: usize, seg_start: u64, offset: u64, buf: &[u8]) -> std::io::Result<()> {
         match self {
-            Sink::Single(file) => write_all_at(file, buf, offset),
-            Sink::Parts(parts) => write_all_at(&*parts.file(idx)?, buf, offset - seg_start),
+            Store::Single(file) => write_all_at(file, buf, offset),
+            Store::Parts(parts) => write_all_at(&*parts.file(idx)?, buf, offset - seg_start),
         }
     }
 
-    /// Make everything written so far durable.
     fn sync(&self) -> std::io::Result<()> {
         match self {
-            Sink::Single(file) => file.sync_data(),
-            Sink::Parts(parts) => {
+            Store::Single(file) => file.sync_data(),
+            Store::Parts(parts) => {
                 let files: Vec<Arc<File>> = parts.files.lock().unwrap().values().cloned().collect();
                 files.iter().try_for_each(|f| f.sync_data())
             }
@@ -1045,9 +1132,57 @@ fn mark_sparse(file: &File) {
     }
 }
 
-/// Other platforms create sparse files on `set_len` already.
-#[cfg(not(windows))]
-fn mark_sparse(_file: &File) {}
+/// Reserve the whole part file before the first byte arrives. With N connections filling N places
+/// of a sparse file, the file system has to find blocks for each write's hole as it comes, which
+/// cost more than the copying itself (measured on ext4: 2–8× the kernel time, writes into the
+/// cache 3–9× slower). Reserved up front, the blocks are there, and a full disk fails now rather
+/// than halfway through. A file system that can't reserve (FAT, some network shares) gets a sparse
+/// file as before.
+#[cfg(target_os = "linux")]
+fn preallocate(file: &File, size: u64) -> std::io::Result<()> {
+    use std::os::unix::io::AsRawFd;
+    // SAFETY: the descriptor is open for as long as `file` is; no memory is passed
+    if unsafe { libc::fallocate(file.as_raw_fd(), 0, 0, size as libc::off_t) } == 0 {
+        return Ok(());
+    }
+    let err = std::io::Error::last_os_error();
+    match err.raw_os_error() {
+        Some(libc::EOPNOTSUPP) | Some(libc::ENOSYS) | Some(libc::EINVAL) => file.set_len(size),
+        _ => Err(err),
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn preallocate(file: &File, size: u64) -> std::io::Result<()> {
+    use std::os::unix::io::AsRawFd;
+    let mut store = libc::fstore_t {
+        fst_flags: libc::F_ALLOCATEALL,
+        fst_posmode: libc::F_PEOFPOSMODE,
+        fst_offset: 0,
+        fst_length: size as libc::off_t,
+        fst_bytesalloc: 0,
+    };
+    // SAFETY: `store` is a complete fstore_t that outlives the call
+    if unsafe { libc::fcntl(file.as_raw_fd(), libc::F_PREALLOCATE, &mut store as *mut libc::fstore_t) } == -1 {
+        let err = std::io::Error::last_os_error();
+        if err.raw_os_error() == Some(libc::ENOSPC) {
+            return Err(err);
+        }
+    }
+    file.set_len(size)
+}
+
+/// Windows keeps a sparse file: NTFS would otherwise zero-fill everything before a far write.
+#[cfg(windows)]
+fn preallocate(file: &File, size: u64) -> std::io::Result<()> {
+    mark_sparse(file);
+    file.set_len(size)
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
+fn preallocate(file: &File, size: u64) -> std::io::Result<()> {
+    file.set_len(size)
+}
 
 fn write_all_at(file: &File, mut buf: &[u8], mut offset: u64) -> std::io::Result<()> {
     while !buf.is_empty() {

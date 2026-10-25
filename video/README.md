@@ -4,9 +4,9 @@ The races on the [website](https://zecod.github.io/byterush/#demo) and the GIFs 
 
 | Composition | File | Chrome alone | Chrome + Byterush |
 |---|---|---:|---:|
-| `Demo` | 961 MB from archive.org | 3:41.3 | 0:13.3 (32 connections) |
-| `Demo10GBHelsinki` | 10.7 GB from Hetzner Helsinki | 9:03.9 | 0:59.5 (16 connections) |
-| `Demo10GBFalkenstein` | 10.7 GB from Hetzner Falkenstein | 4:59.1 | 0:54.9 (16 connections) |
+| `Demo` | 961 MB from archive.org | 13:02.1 | 0:17.2 (32 connections) |
+| `Demo10GBHelsinki` | 10.7 GB from Hetzner Helsinki | 9:33.5 | 0:55.1 (16 connections) |
+| `Demo10GBFalkenstein` | 10.7 GB from Hetzner Falkenstein | 5:36.9 | 0:50.1 (16 connections) |
 
 `src/Demo.tsx` is the edit, the same for each race:
 
