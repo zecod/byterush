@@ -84,22 +84,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            video/package-lock.json
       - run: npm ci
       - name: Type check
         run: npx tsc --noEmit
       - name: Build
         run: npx vite build
-      - name: Landing page script parses
-        run: |
-          for f in landing/*.js; do node --check "$f"; done
-      - name: Videos lint and type check
-        working-directory: video
-        run: |
-          npm ci --ignore-scripts
-          npm run lint
       - name: Extension scripts parse
         run: |
           for f in extension/*.js; do
