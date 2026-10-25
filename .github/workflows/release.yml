@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing tag to build and publish, e.g. v0.3.0 (re-uses its draft release)
+        description: "Tag to release, e.g. v0.3.0: an existing one (its draft is reused), or a new one, created on the commit this runs from"
         required: true
         type: string
 
@@ -51,18 +51,37 @@ jobs:
             exit 1
           fi
 
+      # A pushed tag builds that tag. "Run workflow" in the Actions tab names a tag: an existing
+      # one is built again (its draft release is reused); a new one is created here, on the commit
+      # the workflow was run from, once that commit's files carry the version. A tag the workflow
+      # creates starts no second run, so this run goes on to build it.
       - uses: actions/checkout@v7
         with:
-          ref: refs/tags/${{ env.TAG }}
-
-      - id: tag
-        run: |
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+
+      - name: The tag, created here when it is new
+        id: tag
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then
+            git fetch --quiet origin "refs/tags/$TAG:refs/tags/$TAG"
+            git checkout --quiet "$TAG"
+          elif [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            node scripts/version.mjs --check "${TAG#v}"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Byterush ${TAG#v}"
+            git push origin "refs/tags/$TAG"
+            echo "Created $TAG at $(git rev-parse --short HEAD)"
+          else
+            echo "::error::there is no tag $TAG"
+            exit 1
+          fi
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: The tag matches the version in every file
         run: node scripts/version.mjs --check "${TAG#v}"
