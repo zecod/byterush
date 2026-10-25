@@ -1,7 +1,7 @@
 export const APP_NAME = "Byterush";
 export const API = "http://127.0.0.1:51723/v1";
 /** The setup guide on the website (also linked from the popup). */
-export const SETUP_URL = "https://zecod.github.io/byterush/setup.html";
+export const SETUP_URL = "https://zecod.github.io/byterush-frontend/setup.html";
 
 const DEFAULTS = { enabled: true, excluded: [] };
 

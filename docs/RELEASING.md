@@ -60,7 +60,7 @@ suffixes in an extension version, and Windows Installer allows at most `255.255.
 6. Follow the run under *Actions → Release*. It takes about half an hour, most of it the
    optimized Rust builds. When it's done, check the
    [release page](https://github.com/zecod/byterush/releases/latest) and the
-   [landing page](https://zecod.github.io/byterush/).
+   [landing page](https://zecod.github.io/byterush-frontend/).
 
 ## What the workflow does
 
@@ -182,13 +182,14 @@ since mid-2023 usually live on a hardware token or in a cloud HSM and can't be e
 
 ## How the landing page picks up a release
 
-The landing page (`landing/`, deployed to GitHub Pages by `.github/workflows/pages.yml`) asks the
+The landing page (`landing/` in [zecod/byterush-frontend](https://github.com/zecod/byterush-frontend),
+deployed to GitHub Pages from there) asks the
 GitHub API for the [latest release](https://api.github.com/repos/zecod/byterush/releases/latest)
 in the visitor's browser and links each download button straight to the matching file. It
 recognizes files by tauri-action's default names (`Byterush_0.3.0_x64-setup.exe`,
 `Byterush_0.3.0_aarch64.dmg`, `Byterush-0.3.0-1.x86_64.rpm`, …), which is why the publish job
 insists on them: changing `productName`, the bundle targets or tauri-action's
-`releaseAssetNamePattern` means updating `landing/main.js` too.
+`releaseAssetNamePattern` means updating `landing/main.js` in byterush-frontend too.
 
 Drafts are invisible to that API, so the site switches to a new version the moment the release
 is published, with no redeploy. Browsers cache the answer for up to an hour per session; while the

@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.3.0",
   "license": "MIT",
-  "homepage": "https://zecod.github.io/byterush/",
+  "homepage": "https://zecod.github.io/byterush-frontend/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zecod/byterush.git"
