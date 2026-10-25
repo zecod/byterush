@@ -10,7 +10,7 @@ entries for people who use Byterush, not for people who read the diff.
 
 ## [Unreleased]
 
-## [0.3.0] - unreleased
+## [0.3.0] - 2026-10-25
 
 ### Added
 
