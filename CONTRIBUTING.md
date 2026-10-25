@@ -29,7 +29,7 @@ follow the [code of conduct](CODE_OF_CONDUCT.md).
   its first connection, and Chrome's copy is cancelled only if the app got the same file. Otherwise
   Chrome carries on as if the extension weren't there.
 - **UI** – `src/`, React + Vite with a virtualized download list.
-- **Landing page** – `landing/`, static, deployed to GitHub Pages by `.github/workflows/pages.yml`.
+- **Website and demo videos** – in [zecod/byterush-frontend](https://github.com/zecod/byterush-frontend).
 
 ## Setting up
 
@@ -75,11 +75,8 @@ cargo test
 npx tsc --noEmit
 npx vite build
 
-# extension and landing page
-for f in extension/*.js landing/*.js; do node --check "$f"; done
-
-# videos (from video/, after npm ci)
-npm run lint
+# extension
+for f in extension/*.js; do node --check "$f"; done
 
 # versions agree across package.json, Cargo.toml, tauri.conf.json, manifest.json and the lockfiles
 npm run version:check

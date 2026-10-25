@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="https://zecod.github.io/byterush/"><b>Website</b></a> ·
+  <a href="https://zecod.github.io/byterush-frontend/"><b>Website</b></a> ·
   <a href="#download">Download</a> ·
   <a href="#benchmarks">Benchmarks</a> ·
   <a href="#browser-extension">Browser extension</a> ·
@@ -27,11 +27,11 @@
 </p>
 
 <p align="center">
-  <a href="https://zecod.github.io/byterush/#demo">
+  <a href="https://zecod.github.io/byterush-frontend/#demo">
     <img src="docs/media/demo.gif" width="860" alt="Two real screen recordings side by side, timed from the click: the same 961 MB file from archive.org in Chrome alone, and in Chrome with Byterush after its New download window. Byterush is done after 17.2 seconds; Chrome alone takes 13 minutes 2 seconds.">
   </a>
   <br>
-  <sub>▶ <a href="https://zecod.github.io/byterush/#demo">Watch the demo</a>: the click, the New download window, then Chrome alone against Chrome with Byterush · also on 10.7 GB: <a href="#10-gb-screen-recorded">10.4× faster</a></sub>
+  <sub>▶ <a href="https://zecod.github.io/byterush-frontend/#demo">Watch the demo</a>: the click, the New download window, then Chrome alone against Chrome with Byterush · also on 10.7 GB: <a href="#10-gb-screen-recorded">10.4× faster</a></sub>
 </p>
 
 ## Why Byterush
@@ -75,11 +75,11 @@ Many small files are fast too: 500 files of 48 KB finish in **0.36 s** with thre
 Hetzner's 10.7 GB test file, clicked in Chrome twice, one take right after the other: once on its own, once with the extension handing it to the Byterush app (16 connections). From Helsinki, one connection managed about 19 MB/s; Byterush finished in **55.1 s** against Chrome's **9 min 34 s**. From Falkenstein, closer, Chrome took 5 min 37 s and Byterush 50.1 s. Byterush was writing as fast as the VM's disk allowed both times.
 
 <p align="center">
-  <a href="https://zecod.github.io/byterush/#demo">
+  <a href="https://zecod.github.io/byterush-frontend/#demo">
     <img src="docs/media/demo-10gb-helsinki.gif" width="860" alt="Two real screen recordings side by side: the same 10.7 GB file from Hetzner Helsinki in Chrome alone and in Chrome with Byterush. Byterush's window shows 16 ranges filling at about 210 MB/s and is done after 55 seconds; Chrome's side then fast-forwards until it is done after 9 minutes 34 seconds.">
   </a>
   <br>
-  <sub>▶ Both 10 GB races in full, with the click and the New download window, on the <a href="https://zecod.github.io/byterush/#demo">website</a></sub>
+  <sub>▶ Both 10 GB races in full, with the click and the New download window, on the <a href="https://zecod.github.io/byterush-frontend/#demo">website</a></sub>
 </p>
 
 ## Features
@@ -123,7 +123,7 @@ Hetzner's 10.7 GB test file, clicked in Chrome twice, one take right after the o
 
 ## Download
 
-Get the latest version from **[Releases](https://github.com/zecod/byterush/releases/latest)** or from the [website](https://zecod.github.io/byterush/#download), which picks the right file for your system.
+Get the latest version from **[Releases](https://github.com/zecod/byterush/releases/latest)** or from the [website](https://zecod.github.io/byterush-frontend/#download), which picks the right file for your system.
 
 | System | File |
 |---|---|
@@ -142,7 +142,7 @@ The extension in [`extension/`](extension) hands browser downloads to the app; i
 2. Turn on **Developer mode**, click **Load unpacked** and pick that folder.
 3. Pin it, and to catch private windows too: **Details → Allow in Incognito**.
 
-The [setup page](https://zecod.github.io/byterush/setup.html) walks through the same steps for each browser, checks live that the extension is loaded and reaches the app, and lists why a download can stay in the browser.
+The [setup page](https://zecod.github.io/byterush-frontend/setup.html) walks through the same steps for each browser, checks live that the extension is loaded and reaches the app, and lists why a download can stay in the browser.
 
 How it decides: while Chrome is choosing the file name, the extension sends the download to the app together with the exact request headers Chrome used. The app opens its first connection and compares the answer with what the browser was getting (a web page instead of the file means a login or bot check; a different size means a different file). Only when it's the same file is Chrome's copy cancelled; otherwise Chrome carries on as if nothing happened. If you start a download again whose link had expired, the paused download in Byterush continues from the new link instead of starting over.
 
@@ -173,10 +173,10 @@ src-tauri/src/lib.rs    Tauri commands, UI updates, clipboard watcher
 src-tauri/src/bridge.rs local HTTP bridge for the extension (127.0.0.1:51723)
 src/                    React interface
 extension/              Chrome / Edge extension
-landing/                website (GitHub Pages)
-video/                  the demo video (Remotion), cut from real screen recordings
 scripts/                benchmark, chart, extension end-to-end test, release helpers
 ```
+
+The website and the demo videos live in [zecod/byterush-frontend](https://github.com/zecod/byterush-frontend).
 
 ## FAQ
 
@@ -227,7 +227,7 @@ npm run tauri build               # installers in src-tauri/target/release/bundl
 
 - `scripts/bench.sh <url> [runs]`: one connection against Byterush with 8, 16 and 32 connections.
 - `CHROME=/path/to/chromium node scripts/extension-e2e.mjs`: the extension in a real Chromium against the real bridge and engine.
-- `video/`: `npm ci && npm run dev` to edit the demo, `npm run publish` to render it for the site and this README; see [video/README.md](video/README.md).
+- The demo videos and this README's GIFs are rendered in [zecod/byterush-frontend](https://github.com/zecod/byterush-frontend) (`video/`).
 
 Releases are built by GitHub Actions for every platform when a `v*` tag is pushed: see [`docs/RELEASING.md`](docs/RELEASING.md).
 
@@ -237,4 +237,4 @@ Bug reports, ideas and pull requests are welcome: start with [`CONTRIBUTING.md`]
 
 ## License
 
-[MIT](LICENSE) © zecod and the Byterush contributors. Interface font: IBM Plex Mono (SIL Open Font License). Icons: [Hugeicons](https://hugeicons.com) free set. The videos in `video/` are made with [Remotion](https://www.remotion.dev), which has its own license for companies.
+[MIT](LICENSE) © zecod and the Byterush contributors. Interface font: IBM Plex Mono (SIL Open Font License). Icons: [Hugeicons](https://hugeicons.com) free set. The demo videos are made with [Remotion](https://www.remotion.dev), which has its own license for companies.
