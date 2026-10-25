@@ -73,20 +73,20 @@
       "server": "Hetzner Helsinki",
       "bytes": 10737418240,
       "how": "Chrome vs the Byterush app (16 connections), screen-recorded 24 Oct 2026",
-      "note": "the 10 GB demo video, both timed from the click; Byterush's time includes about 4 s in its New download window, and it downloaded at the VM's disk speed (about 190 MB/s); one run each",
+      "note": "the 10 GB demo video, both timed from the click; Byterush's time includes about 4 s in its New download window, and it downloaded at the VM's disk speed (about 210 MB/s); one run each",
       "runs": [
         {
           "connections": 1,
           "label": "Chrome",
           "seconds": [
-            543.93
+            573.45
           ]
         },
         {
           "connections": 16,
           "label": "Byterush app · 16",
           "seconds": [
-            59.52
+            55.06
           ]
         }
       ]
@@ -99,20 +99,20 @@
       "server": "Hetzner Falkenstein",
       "bytes": 10737418240,
       "how": "Chrome vs the Byterush app (16 connections), screen-recorded 24 Oct 2026",
-      "note": "the 10 GB demo video, both timed from the click; Byterush's time includes about 4 s in its New download window, and it downloaded at the VM's disk speed (about 210 MB/s); one run each",
+      "note": "the 10 GB demo video, both timed from the click; Byterush's time includes about 4 s in its New download window, and it downloaded at the VM's disk speed (about 230 MB/s); one run each",
       "runs": [
         {
           "connections": 1,
           "label": "Chrome",
           "seconds": [
-            299.15
+            336.88
           ]
         },
         {
           "connections": 16,
           "label": "Byterush app · 16",
           "seconds": [
-            54.89
+            50.12
           ]
         }
       ]
