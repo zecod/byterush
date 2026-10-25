@@ -75,7 +75,11 @@ suffixes in an extension version, and Windows Installer allows at most `255.255.
    | `ubuntu-22.04` | `Byterush_X.Y.Z_amd64.AppImage`, `Byterush_X.Y.Z_amd64.deb`, `Byterush-X.Y.Z-1.x86_64.rpm` |
    | `ubuntu-22.04-arm` | `Byterush_X.Y.Z_aarch64.AppImage`, `Byterush_X.Y.Z_arm64.deb`, `Byterush-X.Y.Z-1.aarch64.rpm` |
 
-   The Linux builds run on Ubuntu 22.04 so the packages work with glibc 2.35 and newer.
+   The Linux builds run on Ubuntu 22.04 so the packages work with glibc 2.35 and newer. The arm64
+   Linux build only runs while the repository is public: GitHub's arm64 runners are free for public
+   repositories only, and in a private one the job would wait for a runner that never comes. A
+   release made from a private repository has no arm64 Linux files, and the landing page says so
+   to visitors on ARM.
 3. **publish**, only if every build succeeded: zips `extension/` into
    `byterush-extension-X.Y.Z.zip` (reproducibly: same commit, same bytes), downloads every file of
    the draft, checks that all the installers above are there, uploads `SHA256SUMS.txt` covering all
