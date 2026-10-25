@@ -53,6 +53,10 @@ suffixes in an extension version, and Windows Installer allows at most `255.255.
    git push origin v0.3.0
    ```
 
+   Or let the workflow tag for you: under *Actions → Release → Run workflow*, keep `main`
+   selected and enter `v0.3.0`. The workflow creates the tag on `main`'s current commit (whose
+   files must already carry 0.3.0, step 2) and builds it in the same run.
+
 6. Follow the run under *Actions → Release*. It takes about half an hour, most of it the
    optimized Rust builds. When it's done, check the
    [release page](https://github.com/zecod/byterush/releases/latest) and the
@@ -60,10 +64,11 @@ suffixes in an extension version, and Windows Installer allows at most `255.255.
 
 ## What the workflow does
 
-1. **prepare**: checks that the tag is `vX.Y.Z` and that all six files carry exactly that version,
-   takes the `## [X.Y.Z]` section of `CHANGELOG.md` as the release notes (no section, no
-   release), and creates a **draft** release for the tag. A draft that already exists for the tag
-   is reused; a tag that is already published stops the run.
+1. **prepare**: checks that the tag is `vX.Y.Z`; when the run was started by hand for a tag that
+   doesn't exist yet, creates it on the commit the run was started from. Then it checks that all
+   six files carry exactly that version, takes the `## [X.Y.Z]` section of `CHANGELOG.md` as the
+   release notes (no section, no release), and creates a **draft** release for the tag. A draft
+   that already exists for the tag is reused; a tag that is already published stops the run.
 2. **build**, in parallel, with [tauri-action](https://github.com/tauri-apps/tauri-action), each
    uploading its files to the draft:
 
