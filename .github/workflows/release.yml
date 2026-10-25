@@ -309,7 +309,7 @@ jobs:
           mkdir -p "$dir"
           gh release download "$TAG" --dir "$dir" --clobber
           rm -f "$dir/SHA256SUMS.txt"
-          # the landing page finds the installers by these names (tauri-action's defaults)
+          # the landing page (zecod/byterush-frontend) finds the installers by these names (tauri-action's defaults)
           required=(
             "Byterush_${VERSION}_x64-setup.exe"
             "Byterush_${VERSION}_x64_en-US.msi"
