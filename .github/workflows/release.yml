@@ -42,6 +42,7 @@ jobs:
       sha: ${{ steps.tag.outputs.sha }}
       release_id: ${{ steps.draft.outputs.result }}
       arm64_linux: ${{ steps.visibility.outputs.public }}
+      matrix: ${{ steps.matrix.outputs.include }}
     steps:
       - name: Tag format
         run: |
@@ -76,6 +77,26 @@ jobs:
           private=$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)
           echo "public=$([ "$private" = false ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           [ "$private" = false ] || echo "::warning::Private repository: the Linux arm64 build is skipped (arm64 runners are free for public repositories only)."
+
+      # The build matrix: one job per installer set. Windows on Arm (an arm64 NSIS installer only,
+      # WiX can't make arm64 .msi packages) is not in it: it has never been built, so try it with a
+      # workflow_dispatch run on a test tag first, and add its file name to the publish job's list.
+      - name: Build matrix
+        id: matrix
+        env:
+          PUBLIC: ${{ steps.visibility.outputs.public }}
+        run: |
+          include='[
+            {"name": "Windows x64", "runner": "windows-latest", "target": "", "args": ""},
+            {"name": "macOS Apple Silicon", "runner": "macos-latest", "target": "aarch64-apple-darwin", "args": "--target aarch64-apple-darwin"},
+            {"name": "macOS Intel", "runner": "macos-latest", "target": "x86_64-apple-darwin", "args": "--target x86_64-apple-darwin"},
+            {"name": "Linux x64", "runner": "ubuntu-22.04", "target": "", "args": ""}
+          ]'
+          if [ "$PUBLIC" = true ]; then
+            include=$(jq -c '. + [{"name": "Linux arm64", "runner": "ubuntu-22.04-arm", "target": "", "args": ""}]' <<<"$include")
+          fi
+          echo "include=$(jq -c . <<<"$include")" >> "$GITHUB_OUTPUT"
+          jq . <<<"$include"
 
       - name: Release notes from CHANGELOG.md
         run: |
@@ -121,32 +142,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - name: Windows x64
-            runner: windows-latest
-            args: ""
-          - name: macOS Apple Silicon
-            runner: macos-latest
-            target: aarch64-apple-darwin
-            args: --target aarch64-apple-darwin
-          - name: macOS Intel
-            runner: macos-latest
-            target: x86_64-apple-darwin
-            args: --target x86_64-apple-darwin
-          - name: Linux x64
-            runner: ubuntu-22.04
-            args: ""
-          - name: Linux arm64
-            runner: ubuntu-22.04-arm
-            args: ""
-          # Windows on Arm, NSIS installer only (WiX can't make arm64 .msi packages). Not enabled:
-          # it has never been built. Try it with a workflow_dispatch run on a test tag first.
-          # - name: Windows arm64
-          #   runner: windows-latest
-          #   target: aarch64-pc-windows-msvc
-          #   args: --target aarch64-pc-windows-msvc --bundles nsis
+        # decided by the prepare job: the arm64 Linux build only while the repository is public
+        include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
-    if: matrix.runner != 'ubuntu-22.04-arm' || needs.prepare.outputs.arm64_linux == 'true'
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
