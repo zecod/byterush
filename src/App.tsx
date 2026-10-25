@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -69,6 +70,10 @@ export default function App() {
   const [showSetup, setShowSetup] = useState(false);
   const [browsers, setBrowsers] = useState<Browser[]>([]);
   const [extensionSeen, setExtensionSeen] = useState(false);
+  const [version, setVersion] = useState("");
+  useEffect(() => {
+    getVersion().then(setVersion).catch(() => {});
+  }, []);
   const [menu, setMenu] = useState<{ x: number; y: number; d: Download } | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [speedHistory, setSpeedHistory] = useState<number[]>(() => Array(HISTORY).fill(0));
@@ -334,7 +339,7 @@ export default function App() {
         <div className="brand" data-tauri-drag-region>
           <Logo />
           byterush
-          <span className="brand-version">v0.2</span>
+          {version && <span className="brand-version">v{version}</span>}
         </div>
         <div className="search">
           <Icon icon={Search01Icon} size={15} />

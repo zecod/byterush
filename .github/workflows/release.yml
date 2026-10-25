@@ -41,6 +41,7 @@ jobs:
       version: ${{ steps.tag.outputs.version }}
       sha: ${{ steps.tag.outputs.sha }}
       release_id: ${{ steps.draft.outputs.result }}
+      arm64_linux: ${{ steps.visibility.outputs.public }}
     steps:
       - name: Tag format
         run: |
@@ -64,6 +65,17 @@ jobs:
 
       - name: The tag matches the version in every file
         run: node scripts/version.mjs --check "${TAG#v}"
+
+      # GitHub's arm64 Linux runners are free for public repositories only; in a private one a job
+      # asking for them waits for a runner that never comes, so the arm64 build is skipped there.
+      - name: Repository visibility
+        id: visibility
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          private=$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)
+          echo "public=$([ "$private" = false ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          [ "$private" = false ] || echo "::warning::Private repository: the Linux arm64 build is skipped (arm64 runners are free for public repositories only)."
 
       - name: Release notes from CHANGELOG.md
         run: |
@@ -134,6 +146,7 @@ jobs:
           #   target: aarch64-pc-windows-msvc
           #   args: --target aarch64-pc-windows-msvc --bundles nsis
     runs-on: ${{ matrix.runner }}
+    if: matrix.runner != 'ubuntu-22.04-arm' || needs.prepare.outputs.arm64_linux == 'true'
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
@@ -250,6 +263,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       VERSION: ${{ needs.prepare.outputs.version }}
+      ARM64_LINUX: ${{ needs.prepare.outputs.arm64_linux }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -287,11 +301,11 @@ jobs:
             "Byterush_${VERSION}_amd64.AppImage"
             "Byterush_${VERSION}_amd64.deb"
             "Byterush-${VERSION}-1.x86_64.rpm"
-            "Byterush_${VERSION}_aarch64.AppImage"
-            "Byterush_${VERSION}_arm64.deb"
-            "Byterush-${VERSION}-1.aarch64.rpm"
             "byterush-extension-${VERSION}.zip"
           )
+          if [ "$ARM64_LINUX" = true ]; then
+            required+=("Byterush_${VERSION}_aarch64.AppImage" "Byterush_${VERSION}_arm64.deb" "Byterush-${VERSION}-1.aarch64.rpm")
+          fi
           missing=0
           for name in "${required[@]}"; do
             if [ ! -s "$dir/$name" ]; then
