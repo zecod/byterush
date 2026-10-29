@@ -114,7 +114,12 @@ export function DetailsPanel({ row, onClose }: { row: Download; onClose: () => v
               {formatBytes(d.downloaded)} / {formatBytes(d.size)} · {formatPercent(pct, 1)}
             </span>
             {d.eta != null && live && <span>{formatEta(d.eta)} left</span>}
-            {d.active_connections > 0 && <span>{d.active_connections} connections</span>}
+            {d.active_connections > 0 && (
+              <span>
+                {d.active_connections} connections
+                {d.refused_connections > 0 && <span title="This server allows only so many connections at once; the others wait for a turn and try again."> · {d.refused_connections} refused by the server</span>}
+              </span>
+            )}
           </div>
         </div>
         <button className="icon-btn" onClick={onClose} title="Close details">

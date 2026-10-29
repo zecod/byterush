@@ -196,10 +196,14 @@ struct Site {
     data: Arc<Vec<u8>>,
     /// Refuse requests without a Referer from the site itself (hotlink protection).
     referer: bool,
-    /// Refuse connections beyond this many at once (per-client caps).
-    cap: usize,
+    /// Refuse connections beyond this many at once (per-client caps); a test may raise it.
+    cap: Arc<AtomicUsize>,
     inflight: Arc<AtomicUsize>,
+    /// The most connections ever served at once.
+    peak: Arc<AtomicUsize>,
     refused: Arc<AtomicUsize>,
+    /// Pause per 256 KB chunk, to pace a connection.
+    chunk_delay: Duration,
 }
 
 struct InFlight(Arc<AtomicUsize>);
@@ -215,11 +219,13 @@ async fn site_file(State(site): State<Site>, headers: HeaderMap) -> Response {
     if site.referer && !referer.starts_with("http://127.0.0.1") {
         return (StatusCode::FORBIDDEN, "hotlinking not allowed").into_response();
     }
-    if site.inflight.fetch_add(1, Ordering::SeqCst) >= site.cap {
+    let inflight = site.inflight.fetch_add(1, Ordering::SeqCst) + 1;
+    if inflight > site.cap.load(Ordering::SeqCst) {
         site.inflight.fetch_sub(1, Ordering::SeqCst);
         site.refused.fetch_add(1, Ordering::SeqCst);
         return (StatusCode::FORBIDDEN, "too many connections").into_response();
     }
+    site.peak.fetch_max(inflight, Ordering::SeqCst);
     let guard = InFlight(site.inflight.clone());
     let total = site.data.len();
     let range = headers.get(header::RANGE).and_then(|v| v.to_str().ok()).and_then(|v| v.strip_prefix("bytes="));
@@ -230,10 +236,11 @@ async fn site_file(State(site): State<Site>, headers: HeaderMap) -> Response {
     // a short pause per chunk keeps several connections open at once; big chunks keep coarse
     // timers (about 15 ms on Windows) from stretching the test
     let chunks: Vec<Bytes> = site.data[start..end].chunks(256 * 1024).map(Bytes::copy_from_slice).collect();
+    let delay = site.chunk_delay;
     let stream = futures_util::stream::iter(chunks).then(move |c| {
         let _held = &guard; // the connection counts until its body is done
         async move {
-            tokio::time::sleep(Duration::from_millis(1)).await;
+            tokio::time::sleep(delay).await;
             Ok::<_, std::io::Error>(c)
         }
     });
@@ -253,7 +260,15 @@ async fn serve_site(site: Site) -> String {
 }
 
 fn site(data: &[u8], referer: bool, cap: usize) -> Site {
-    Site { data: Arc::new(data.to_vec()), referer, cap, inflight: Arc::new(AtomicUsize::new(0)), refused: Arc::new(AtomicUsize::new(0)) }
+    Site {
+        data: Arc::new(data.to_vec()),
+        referer,
+        cap: Arc::new(AtomicUsize::new(cap)),
+        inflight: Arc::new(AtomicUsize::new(0)),
+        peak: Arc::new(AtomicUsize::new(0)),
+        refused: Arc::new(AtomicUsize::new(0)),
+        chunk_delay: Duration::from_millis(1),
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -300,8 +315,40 @@ async fn per_client_connection_cap_does_not_stop_the_download() {
         .unwrap();
     wait_for(&m, &id, Status::Completed).await;
     assert!(refused.load(Ordering::SeqCst) > 0, "the cap was never hit");
-    // refused connections step aside at once instead of retrying with backoff
+    // refused connections step aside at once, and the download doesn't wait for their next try
     assert!(started.elapsed() < Duration::from_secs(4), "took {:?}", started.elapsed());
+    assert!(std::fs::read(out.path().join("file.bin")).unwrap() == data);
+}
+
+/// Hetzner, for one, serves two requests per client and answers the rest with 429 while they
+/// last. The refused connections must come back when the server lets them, not leave the
+/// download on one connection to the end.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn refused_connections_come_back_when_the_server_allows_them() {
+    let out = tempfile::tempdir().unwrap();
+    let data = pattern(48 * MB, 11);
+    // one connection at a time, paced to about 12 MB/s: alone it needs some four seconds
+    let mut s = site(&data, false, 1);
+    s.chunk_delay = Duration::from_millis(20);
+    let (cap, peak) = (s.cap.clone(), s.peak.clone());
+    let base = serve_site(s).await;
+    let m = manager(out.path());
+    let id = m
+        .add(AddRequest {
+            url: format!("{base}/file.bin"),
+            dir: Some(out.path().to_string_lossy().into()),
+            connections: Some(8),
+            start: true,
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    // the first burst hits the cap; a moment later the server has room again
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    assert_eq!(peak.load(Ordering::SeqCst), 1);
+    cap.store(8, Ordering::SeqCst);
+    wait_for(&m, &id, Status::Completed).await;
+    assert!(peak.load(Ordering::SeqCst) > 1, "the refused connections never came back");
     assert!(std::fs::read(out.path().join("file.bin")).unwrap() == data);
 }
 

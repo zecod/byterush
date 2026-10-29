@@ -354,12 +354,18 @@ fn spawn_progress_loop(app: AppHandle, manager: Manager, resync: Arc<AtomicBool>
         let mut last_version = 0;
         let mut sent: HashMap<String, DownloadView> = HashMap::new();
         loop {
-            tokio::select! {
-                _ = tokio::time::sleep(Duration::from_millis(400)) => {}
-                _ = manager.wait_for_change() => {
-                    // let a burst of changes (a batch, pause all) land in one update
-                    tokio::time::sleep(Duration::from_millis(16)).await;
+            if manager.has_active() {
+                tokio::select! {
+                    _ = tokio::time::sleep(Duration::from_millis(400)) => {}
+                    _ = manager.wait_for_change() => {
+                        // let a burst of changes (a batch, pause all) land in one update
+                        tokio::time::sleep(Duration::from_millis(16)).await;
+                    }
                 }
+            } else {
+                // nothing moves between changes: no ticking while the app sits idle
+                manager.wait_for_change().await;
+                tokio::time::sleep(Duration::from_millis(16)).await;
             }
             let full = resync.swap(false, Ordering::Relaxed);
             let version = manager.version();
@@ -394,23 +400,56 @@ fn spawn_progress_loop(app: AppHandle, manager: Manager, resync: Arc<AtomicBool>
     });
 }
 
-/// Offer copied links to downloadable files, like IDM's clipboard monitor.
+/// Offer copied links to downloadable files, like IDM's clipboard monitor. The clipboard is only
+/// read when it changed (Windows numbers every change) and only while the monitor is on: reading
+/// it every look-up copied whatever was on it, a pasted document included, and could get in the
+/// way of the program that was using it.
 fn spawn_clipboard_watcher(app: AppHandle, manager: Manager) {
     std::thread::spawn(move || {
         let Ok(mut clipboard) = arboard::Clipboard::new() else { return };
         let mut last = clipboard.get_text().unwrap_or_default();
+        let mut seen = clipboard_sequence();
+        let mut was_off = false;
         loop {
             std::thread::sleep(Duration::from_millis(800));
+            if !manager.monitor_clipboard() {
+                was_off = true;
+                continue;
+            }
+            if was_off {
+                // what was copied while the monitor was off is not offered when it comes back on
+                was_off = false;
+                last = clipboard.get_text().unwrap_or_default();
+                seen = clipboard_sequence();
+                continue;
+            }
+            let now = clipboard_sequence();
+            if now.is_some() && now == seen {
+                continue;
+            }
+            seen = now;
             let Ok(text) = clipboard.get_text() else { continue };
             if text == last {
                 continue;
             }
             last = text;
-            if manager.settings().monitor_clipboard && engine::naming::looks_like_download(&last) {
+            if engine::naming::looks_like_download(&last) {
                 let _ = app.emit("clipboard-url", last.trim().to_string());
             }
         }
     });
+}
+
+/// Windows counts clipboard changes; the same number means nothing new to read.
+#[cfg(windows)]
+fn clipboard_sequence() -> Option<u32> {
+    // SAFETY: takes nothing and touches no memory of ours
+    Some(unsafe { windows_sys::Win32::System::DataExchange::GetClipboardSequenceNumber() })
+}
+
+#[cfg(not(windows))]
+fn clipboard_sequence() -> Option<u32> {
+    None
 }
 
 /// The app was called Fetchr before: carry its saved downloads and settings over once.

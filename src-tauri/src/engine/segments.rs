@@ -26,10 +26,18 @@ pub fn initial(size: u64, connections: u8) -> Vec<Segment> {
 /// (seconds). Splitting saves half of what the busiest connection has left to do, so it only
 /// pays when that is more than the cold start: on a far-away server, splitting the last few
 /// megabytes swaps a fast connection for a slow new one and makes the end crawl.
-pub fn claim(segments: &mut Vec<Segment>, cold_start: f64) -> Option<usize> {
+///
+/// With `split` off, only idle segments are handed out. A server that refuses extra connections
+/// counts the one a split cuts short for a while after it is closed, and answers the next request
+/// with 429: on such a server every split cost a refusal and a pause (a 1 GB file on Hetzner,
+/// which allows two connections, took four times longer than one curl).
+pub fn claim(segments: &mut Vec<Segment>, cold_start: f64, split: bool) -> Option<usize> {
     if let Some(i) = segments.iter().position(|s| !s.claimed && s.remaining() > 0) {
         segments[i].claimed = true;
         return Some(i);
+    }
+    if !split {
+        return None;
     }
     let (i, remaining) = segments
         .iter()
@@ -77,12 +85,12 @@ mod tests {
     #[test]
     fn claim_then_steal() {
         let mut segs = initial(8 * MB, 2);
-        assert_eq!(claim(&mut segs, 0.0), Some(0));
-        assert_eq!(claim(&mut segs, 0.0), Some(1));
+        assert_eq!(claim(&mut segs, 0.0, true), Some(0));
+        assert_eq!(claim(&mut segs, 0.0, true), Some(1));
         // segment 0 finishes; a third claim splits segment 1 (4 MB left) in half
         segs[0].downloaded = segs[0].end - segs[0].start;
         segs[0].claimed = false;
-        let i = claim(&mut segs, 0.0).unwrap();
+        let i = claim(&mut segs, 0.0, true).unwrap();
         assert_eq!(i, 2);
         assert_eq!(segs[1].end, segs[2].start);
         assert_eq!(segs[2].end, 8 * MB);
@@ -90,34 +98,45 @@ mod tests {
         // nothing left that is big enough to split
         segs[1].downloaded = segs[1].end - segs[1].start - MB / 2;
         segs[2].downloaded = segs[2].end - segs[2].start - MB / 2;
-        assert_eq!(claim(&mut segs, 0.0), None);
+        assert_eq!(claim(&mut segs, 0.0, true), None);
+    }
+
+    #[test]
+    fn no_split_while_the_server_refuses_connections() {
+        let mut segs = initial(8 * MB, 2);
+        assert_eq!(claim(&mut segs, 0.0, false), Some(0), "idle segments are still handed out");
+        assert_eq!(claim(&mut segs, 0.0, false), Some(1));
+        segs[0].downloaded = segs[0].end - segs[0].start;
+        segs[0].claimed = false;
+        assert_eq!(claim(&mut segs, 0.0, false), None, "the busy segment is left whole");
+        assert_eq!(segs.len(), 2);
     }
 
     #[test]
     fn no_split_when_a_new_connection_would_not_catch_up() {
         let mut segs = initial(64 * MB, 2);
-        claim(&mut segs, 0.0);
-        claim(&mut segs, 0.0);
+        claim(&mut segs, 0.0, true);
+        claim(&mut segs, 0.0, true);
         segs[0].downloaded = segs[0].end - segs[0].start;
         segs[0].claimed = false;
         // 32 MB left at 5 MB/s: halving saves 3.2 s
         segs[1].rate = 5 * MB;
         segs[1].rate_at = Some(std::time::Instant::now());
-        assert_eq!(claim(&mut segs, 4.0), None, "a 4 s cold start costs more than it saves");
+        assert_eq!(claim(&mut segs, 4.0, true), None, "a 4 s cold start costs more than it saves");
         // the same connection stalled two seconds ago: take half of its range
         segs[1].rate_at = Some(std::time::Instant::now() - std::time::Duration::from_secs(2));
-        assert_eq!(claim(&mut segs, 4.0), Some(2), "a stalled connection gets help");
+        assert_eq!(claim(&mut segs, 4.0, true), Some(2), "a stalled connection gets help");
     }
 
     #[test]
     fn split_when_a_new_connection_catches_up() {
         let mut segs = initial(64 * MB, 2);
-        claim(&mut segs, 0.0);
-        claim(&mut segs, 0.0);
+        claim(&mut segs, 0.0, true);
+        claim(&mut segs, 0.0, true);
         segs[0].downloaded = segs[0].end - segs[0].start;
         segs[0].claimed = false;
         segs[1].rate = 5 * MB;
         segs[1].rate_at = Some(std::time::Instant::now());
-        assert_eq!(claim(&mut segs, 1.0), Some(2), "a 1 s cold start is worth 3.2 s saved");
+        assert_eq!(claim(&mut segs, 1.0, true), Some(2), "a 1 s cold start is worth 3.2 s saved");
     }
 }

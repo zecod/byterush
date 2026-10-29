@@ -1,8 +1,13 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import "@fontsource/ibm-plex-mono/400.css";
-import "@fontsource/ibm-plex-mono/500.css";
-import "@fontsource/ibm-plex-mono/600.css";
+// Latin only: the full set shipped 30 font files (Cyrillic, Vietnamese…) that nothing in the
+// interface uses; file names in other scripts fall back to the system's monospace font
+import "@fontsource/ibm-plex-mono/latin-400.css";
+import "@fontsource/ibm-plex-mono/latin-ext-400.css";
+import "@fontsource/ibm-plex-mono/latin-500.css";
+import "@fontsource/ibm-plex-mono/latin-ext-500.css";
+import "@fontsource/ibm-plex-mono/latin-600.css";
+import "@fontsource/ibm-plex-mono/latin-ext-600.css";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import App from "./App";
 import { ConfirmWindow } from "./components/ConfirmWindow";

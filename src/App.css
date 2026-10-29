@@ -1769,6 +1769,38 @@ nav {
   gap: 8px;
 }
 
+.setup-manual {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.setup-manual summary {
+  color: var(--text-weak);
+  cursor: pointer;
+  list-style: none;
+}
+
+.setup-manual summary::-webkit-details-marker {
+  display: none;
+}
+
+.setup-manual summary::before {
+  content: "▸ ";
+}
+
+.setup-manual[open] summary::before {
+  content: "▾ ";
+}
+
+.setup-manual summary:hover {
+  color: var(--text-strong);
+}
+
+.setup-manual .setup-steps {
+  margin-top: 14px;
+}
+
 .setup-folder {
   display: flex;
   gap: 6px;

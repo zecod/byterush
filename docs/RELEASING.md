@@ -173,6 +173,12 @@ since mid-2023 usually live on a hardware token or in a cloud HSM and can't be e
 [`bundle.windows.signCommand`](https://v2.tauri.app/distribute/sign/windows/) in a
 `src-tauri/tauri.windows.conf.json` instead and add that service's credentials to the workflow.
 
+## The extension on the Chrome Web Store
+
+A release does not update the store listing. When something under `extension/` changed, upload
+a new package by hand after the release: `node scripts/extension-store.mjs` makes it, and
+[CHROME_WEB_STORE.md](CHROME_WEB_STORE.md) has the listing text and the steps.
+
 ## Platforms that aren't built yet
 
 - **Windows on Arm**: a commented-out entry in the build matrix of `release.yml` builds an arm64

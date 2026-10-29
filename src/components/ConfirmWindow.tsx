@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -43,8 +43,9 @@ export function ConfirmWindow() {
   const [error, setError] = useState("");
 
   // which download to ask about: the current one when this window loads, then each one the app sends
+  const requests = useRef(0);
   useEffect(() => {
-    const askAbout = (id: string) => setAsked((a) => ({ id, n: (a?.n ?? 0) + 1 }));
+    const askAbout = (id: string) => setAsked({ id, n: ++requests.current });
     const un = listen<string>("ask", (e) => askAbout(e.payload));
     api.askingNow().then((now) => now && askAbout(now));
     return () => {
@@ -52,17 +53,24 @@ export function ConfirmWindow() {
     };
   }, []);
 
-  // the download as the engine has it, shown once loaded; kept fresh while asked about
+  // the download as the engine has it, shown once loaded; kept fresh while asked about. Once it is
+  // answered (or cancelled, or closed away) this window sits hidden until the next hand-over, and
+  // must not keep asking the engine every second meanwhile.
   useEffect(() => {
     if (!asked) return;
     const { id } = asked;
     let first = true;
+    let timer: number | undefined;
     setDownload(null);
     setBusy(false);
     setError("");
     const load = async () => {
       const d = await api.get(id).catch(() => null);
-      if (!d) return;
+      const asking = !!d && (d.status === "queued" || d.status === "connecting" || d.status === "waiting");
+      if (!asking) {
+        clearInterval(timer);
+        if (!d) return;
+      }
       setDownload(d);
       if (first) {
         first = false;
@@ -72,7 +80,7 @@ export function ConfirmWindow() {
       }
     };
     load();
-    const timer = setInterval(load, 1000);
+    timer = window.setInterval(load, 1000);
     return () => clearInterval(timer);
   }, [asked]);
 

@@ -241,6 +241,8 @@ pub struct DownloadView {
     pub speed: f64,
     pub eta: Option<f64>,
     pub active_connections: usize,
+    /// Connections the server refused that wait to try again.
+    pub refused_connections: usize,
 }
 
 #[derive(Clone, Debug, Serialize)]

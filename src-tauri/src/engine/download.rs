@@ -12,6 +12,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
@@ -391,6 +392,8 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
     job.rec.lock().unwrap().status = Status::Downloading;
 
     let mut workers = JoinSet::new();
+    let wake = Arc::new(Wake::default());
+    wake.probe.notify_one(); // the first connection's turn; every request that gets through admits more
     for i in 0..connections {
         // the already-open first response keeps streaming as its segment
         let initial = if i == 0 {
@@ -401,7 +404,7 @@ pub async fn run(ctx: Ctx, job: Arc<Job>, cancel: CancellationToken) -> anyhow::
         } else {
             None
         };
-        workers.spawn(worker(ctx.clone(), job.clone(), sink.clone(), cancel.clone(), initial));
+        workers.spawn(worker(ctx.clone(), job.clone(), sink.clone(), cancel.clone(), wake.clone(), initial));
     }
     let stop_checkpoints = CancellationToken::new();
     let checkpointer = tokio::spawn(checkpoints(job.clone(), sink.clone(), ctx.saver.clone(), stop_checkpoints.clone()));
@@ -584,17 +587,92 @@ fn mismatch(first: &FirstResponse, expect: &Expectation) -> Option<String> {
     }
 }
 
+/// A server that caps connections per client answers the ones over the cap with one of these.
+fn refused(e: &anyhow::Error) -> bool {
+    http_status(e).is_some_and(|s| matches!(s.as_u16(), 403 | 429 | 503))
+}
+
+/// How the connections of one download come up and come back. Servers cap requests per client:
+/// Hetzner, for one, serves two and answers the rest with 429, and sixteen opened at once fed
+/// its rate limiter, which then throttled the two that worked (a 1 GB file took three times
+/// longer than one curl). So connections take turns: every request that gets through admits two
+/// more, which ramps up in a few round trips on a server that allows it and costs a capped server
+/// a couple of refusals instead of a storm. A refused connection used to leave for good, and a
+/// download that started on sixteen ran on one to the end; now it waits for a turn, and one of
+/// the waiting, the scout, tries again on its own after a pause that doubles each time.
+#[derive(Default)]
+struct Wake {
+    /// A turn: one waiting connection may (try to) open.
+    probe: tokio::sync::Notify,
+    waiting: AtomicUsize,
+    scouting: AtomicBool,
+    /// Nothing is left to do, or the download gave up: the waiting connections leave.
+    done: tokio::sync::Notify,
+    stop: AtomicBool,
+}
+
+impl Wake {
+    /// A request got through: two more may try.
+    fn got_through(&self) {
+        if self.waiting.load(Ordering::SeqCst) > 0 {
+            self.probe.notify_one();
+            self.probe.notify_one();
+        }
+    }
+
+    fn finished(&self) {
+        self.done.notify_waiters();
+    }
+
+    /// Wait for a turn, or for the pause a scout gives itself. `true` when there is nothing left
+    /// to wait for and the connection should leave.
+    async fn wait_turn(&self, cancel: &CancellationToken, all_done: impl Fn() -> bool, pause: Option<Duration>) -> bool {
+        let pause = tokio::time::sleep(pause.unwrap_or(Duration::from_secs(3600)));
+        tokio::pin!(pause);
+        self.waiting.fetch_add(1, Ordering::SeqCst);
+        let leave = loop {
+            // armed before the check, so a finish between the two can't go unnoticed; the others
+            // finishing must not wait for this pause to end
+            let (turn, over) = (self.probe.notified(), self.done.notified());
+            tokio::pin!(turn, over);
+            turn.as_mut().enable();
+            over.as_mut().enable();
+            if self.stop.load(Ordering::SeqCst) || all_done() {
+                break true;
+            }
+            tokio::select! {
+                _ = &mut pause => break false,
+                _ = &mut turn => break false,
+                _ = &mut over => {}
+                _ = cancel.cancelled() => break true,
+            }
+        };
+        self.waiting.fetch_sub(1, Ordering::SeqCst);
+        leave
+    }
+}
+
 /// One connection: keeps claiming segments until there is nothing left to do.
 async fn worker(
     ctx: Ctx,
     job: Arc<Job>,
     file: Arc<Sink>,
     cancel: CancellationToken,
+    wake: Arc<Wake>,
     mut initial: Option<(usize, reqwest::Response)>,
 ) -> anyhow::Result<()> {
+    let all_done = || job.rec.lock().unwrap().segments.iter().all(|s| s.remaining() == 0);
+    let mut refusals = 0u32;
+    let mut admitted = initial.is_some();
     loop {
         if cancel.is_cancelled() {
             return Ok(());
+        }
+        if !admitted {
+            if wake.wait_turn(&cancel, all_done, None).await {
+                return Ok(());
+            }
+            admitted = true;
         }
         let (idx, preopened) = match initial.take() {
             Some((idx, resp)) => (idx, Some(resp)),
@@ -602,24 +680,53 @@ async fn worker(
                 // a new connection waits for its first response, then still has to ramp up (TCP
                 // slow start takes several round trips): about three times the request latency
                 let latency = job.rt.lock().unwrap().request_latency;
-                match segments::claim(&mut job.rec.lock().unwrap().segments, 3.0 * latency) {
+                // while the server is refusing connections, no splitting: it would only cost
+                // another refusal (see `claim`)
+                let split = wake.waiting.load(Ordering::SeqCst) == 0;
+                match segments::claim(&mut job.rec.lock().unwrap().segments, 3.0 * latency, split) {
                     Some(idx) => (idx, None),
-                    None => return Ok(()),
+                    None => {
+                        wake.finished();
+                        return Ok(());
+                    }
                 }
             }
         };
         job.rt.lock().unwrap().active += 1;
-        let res = fetch_segment(&ctx, &job, &file, idx, &cancel, preopened).await;
+        let res = fetch_segment(&ctx, &job, &file, idx, &cancel, &wake, preopened).await;
         let others = {
             let mut rt = job.rt.lock().unwrap();
             rt.active -= 1;
             rt.active
         };
         job.rec.lock().unwrap().segments[idx].claimed = false;
-        if let Err(e) = res {
-            // Servers often cap connections per client: drop this connection and let the
-            // remaining ones pick up its range. Only the last connection reports failure.
-            return if others > 0 { Ok(()) } else { Err(e) };
+        let Err(e) = res else {
+            refusals = 0;
+            continue;
+        };
+        if others == 0 {
+            // only the last connection reports failure, and the waiting ones leave with it
+            wake.stop.store(true, Ordering::SeqCst);
+            wake.finished();
+            return Err(e);
+        }
+        if !refused(&e) {
+            // drop this connection and let the remaining ones pick up its range
+            return Ok(());
+        }
+        // refused: wait for a turn, or, as the scout, try again after a pause of 3 s, 6 s, 12 s,
+        // 24 s, 48 s, then a minute
+        refusals += 1;
+        let scout = !wake.scouting.swap(true, Ordering::SeqCst);
+        let pause = scout.then(|| Duration::from_secs((3 * 2u64.pow((refusals - 1).min(5))).min(60)));
+        job.rt.lock().unwrap().refused += 1;
+        let leave = wake.wait_turn(&cancel, all_done, pause).await;
+        job.rt.lock().unwrap().refused -= 1;
+        if scout {
+            wake.scouting.store(false, Ordering::SeqCst);
+        }
+        if leave {
+            return Ok(());
         }
     }
 }
@@ -631,12 +738,13 @@ async fn fetch_segment(
     file: &Arc<Sink>,
     idx: usize,
     cancel: &CancellationToken,
+    wake: &Wake,
     mut preopened: Option<reqwest::Response>,
 ) -> anyhow::Result<()> {
     let mut failures = 0u32;
     loop {
         let before = job.rec.lock().unwrap().segments[idx].pos();
-        let result = fetch_once(ctx, job, file, idx, cancel, preopened.take()).await;
+        let result = fetch_once(ctx, job, file, idx, cancel, wake, preopened.take()).await;
         if cancel.is_cancelled() {
             return Ok(());
         }
@@ -672,6 +780,7 @@ async fn fetch_once(
     file: &Arc<Sink>,
     idx: usize,
     cancel: &CancellationToken,
+    wake: &Wake,
     preopened: Option<reqwest::Response>,
 ) -> anyhow::Result<bool> {
     let (url, headers, start, end, resumable) = {
@@ -715,6 +824,7 @@ async fn fetch_once(
     if resumable && status != StatusCode::PARTIAL_CONTENT {
         bail!("server stopped honouring range requests ({status})");
     }
+    wake.got_through();
 
     let mut stream = resp.bytes_stream();
     let mut pending = Pending::new(start);
@@ -974,8 +1084,48 @@ pub(crate) fn remove_part_files(base: &Path) {
 
 const COPY_CHUNK: usize = 8 * 1024 * 1024;
 
+/// How much a rebuild or a copy lets pile up in the write cache before pushing it to disk. With
+/// one sync of the whole file at the end, the progress sat at 100% for as long as the disk needed
+/// to take gigabytes (a minute on a USB stick), which looked like a hang.
+const SYNC_EVERY: u64 = 256 * 1024 * 1024;
+
+/// `BYTERUSH_SYNC_EVERY_MB` overrides it (for measuring).
+fn sync_every() -> u64 {
+    std::env::var("BYTERUSH_SYNC_EVERY_MB").ok().and_then(|v| v.parse::<u64>().ok()).map_or(SYNC_EVERY, |mb| mb * 1024 * 1024)
+}
+
 fn report(job: &Job, stage: &'static str, done: u64, total: u64) {
     job.rt.lock().unwrap().finishing = Some(Finishing { stage, done, total });
+}
+
+/// Copies `buf` to `writer`, syncing every `SYNC_EVERY` bytes so the progress reported never runs
+/// far ahead of what is on disk.
+struct Copier<'a> {
+    job: &'a Job,
+    stage: &'static str,
+    writer: File,
+    total: u64,
+    done: u64,
+    unsynced: u64,
+}
+
+impl Copier<'_> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<()> {
+        self.writer.write_all(buf)?;
+        self.done += buf.len() as u64;
+        self.unsynced += buf.len() as u64;
+        if self.unsynced >= sync_every() {
+            self.writer.sync_data()?;
+            self.unsynced = 0;
+        }
+        report(self.job, self.stage, self.done, self.total);
+        Ok(())
+    }
+
+    /// The last, short sync: everything but the final stretch is already on disk.
+    fn finish(self) -> std::io::Result<()> {
+        self.writer.sync_all()
+    }
 }
 
 /// Join the segment files in order into the final file ("rebuilding"). The file is assembled under
@@ -989,9 +1139,8 @@ fn rebuild(job: &Job, base: &Path, out: &Path) -> anyhow::Result<()> {
     let total: u64 = segments.iter().map(|&(_, a, b)| b.saturating_sub(a)).sum();
     let staging = naming::staging_path(out);
     let result = (|| -> anyhow::Result<()> {
-        let mut writer = std::io::BufWriter::with_capacity(COPY_CHUNK, File::create(&staging)?);
+        let mut copier = Copier { job, stage: "rebuilding", writer: File::create(&staging)?, total, done: 0, unsynced: 0 };
         let mut buf = vec![0u8; COPY_CHUNK];
-        let mut done = 0u64;
         report(job, "rebuilding", 0, total);
         for (idx, start, end) in segments {
             let mut left = end.saturating_sub(start);
@@ -1002,13 +1151,11 @@ fn rebuild(job: &Job, base: &Path, out: &Path) -> anyhow::Result<()> {
             while left > 0 {
                 let n = (left as usize).min(buf.len());
                 part.read_exact(&mut buf[..n]).with_context(|| format!("part {idx} is incomplete"))?;
-                writer.write_all(&buf[..n])?;
+                copier.write(&buf[..n])?;
                 left -= n as u64;
-                done += n as u64;
-                report(job, "rebuilding", done, total);
             }
         }
-        writer.into_inner().map_err(|e| e.into_error())?.sync_all()?;
+        copier.finish()?;
         std::fs::rename(&staging, out)?;
         Ok(())
     })();
@@ -1034,21 +1181,17 @@ fn move_file(job: &Job, from: &Path, to: &Path) -> anyhow::Result<()> {
     let staging = naming::staging_path(to);
     let result = (|| -> anyhow::Result<()> {
         let mut reader = File::open(from)?;
-        let mut writer = File::create(&staging)?;
+        let mut copier = Copier { job, stage: "moving", writer: File::create(&staging)?, total, done: 0, unsynced: 0 };
         let mut buf = vec![0u8; COPY_CHUNK];
-        let mut done = 0u64;
         report(job, "moving", 0, total);
         loop {
             let n = reader.read(&mut buf)?;
             if n == 0 {
                 break;
             }
-            writer.write_all(&buf[..n])?;
-            done += n as u64;
-            report(job, "moving", done, total);
+            copier.write(&buf[..n])?;
         }
-        writer.sync_all()?;
-        drop(writer);
+        copier.finish()?;
         std::fs::rename(&staging, to)?;
         Ok(())
     })();
@@ -1110,14 +1253,15 @@ fn volume_supports_sparse(_dir: &Path) -> bool {
 }
 
 /// On NTFS a write far into a new file first zero-fills everything before it (gigabytes for a big
-/// download). A sparse file skips that; unwritten ranges are simply holes until filled.
+/// download). A sparse file skips that; unwritten ranges are simply holes until filled. `false`
+/// when the volume can't do it (FAT, exFAT).
 #[cfg(windows)]
-fn mark_sparse(file: &File) {
+fn mark_sparse(file: &File) -> bool {
     use std::os::windows::io::AsRawHandle;
     use windows_sys::Win32::System::IO::DeviceIoControl;
     use windows_sys::Win32::System::Ioctl::FSCTL_SET_SPARSE;
     let mut returned = 0u32;
-    // best effort: FAT/exFAT volumes don't support sparse files and just keep the old behaviour
+    // SAFETY: the handle is open for as long as `file` is; no input buffer, an output of 0 bytes
     unsafe {
         DeviceIoControl(
             file.as_raw_handle() as _,
@@ -1128,7 +1272,7 @@ fn mark_sparse(file: &File) {
             0,
             &mut returned,
             std::ptr::null_mut(),
-        );
+        ) != 0
     }
 }
 
@@ -1172,11 +1316,14 @@ fn preallocate(file: &File, size: u64) -> std::io::Result<()> {
     file.set_len(size)
 }
 
-/// Windows keeps a sparse file: NTFS would otherwise zero-fill everything before a far write.
+/// Windows keeps a sparse file: NTFS would otherwise zero-fill everything before a far write. On
+/// a volume without sparse files (a FAT or exFAT stick) the file is left to grow with the writes:
+/// setting its length there means writing every zero first, minutes for a few gigabytes on a
+/// stick before the first byte lands. Several connections never get here on such a volume (they
+/// use the part-file layout); the one sequential connection that does needs no reservation.
 #[cfg(windows)]
 fn preallocate(file: &File, size: u64) -> std::io::Result<()> {
-    mark_sparse(file);
-    file.set_len(size)
+    if mark_sparse(file) { file.set_len(size) } else { Ok(()) }
 }
 
 #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]

@@ -87,7 +87,9 @@ pub(crate) struct Runtime {
     cancel: Option<CancellationToken>,
     pub verdict: Option<(VerdictSender, Expectation)>,
     pub active: usize,
-    removed: bool,
+    /// Connections the server refused, waiting for a turn (see `download::Wake`): shown to the
+    /// user, so two connections out of eight don't look like the app's choice.
+    pub refused: usize,
     meter_bytes: u64,
     meter_at: Option<Instant>,
     speed: f64,
@@ -219,7 +221,7 @@ impl Manager {
                 Arc::new(Job::new(rec))
             })
             .collect();
-        let limiter = Arc::new(Limiter::new(settings.speed_limit_kbps * 1024));
+        let limiter = Arc::new(Limiter::new(settings.speed_limit_kbps.saturating_mul(1024)));
         let client = build_client(&settings.effective_user_agent());
         let last_added = jobs.iter().map(|j| j.rec.lock().unwrap().added_at).max().unwrap_or(0);
         let saver = Arc::new(Saver { dirty: Mutex::new(false), wake: Condvar::new() });
@@ -261,7 +263,8 @@ impl Manager {
             if settings.effective_user_agent() != st.settings.effective_user_agent() {
                 st.client = build_client(&settings.effective_user_agent());
             }
-            self.inner.limiter.set_rate(settings.speed_limit_kbps * 1024);
+            // an absurd number typed in the settings must not overflow into "no cap" (or a panic)
+            self.inner.limiter.set_rate(settings.speed_limit_kbps.saturating_mul(1024));
             st.settings = settings;
         }
         self.inner.changed();
@@ -514,6 +517,10 @@ impl Manager {
         self.inner.state.lock().unwrap().settings.browser_integration
     }
 
+    pub fn monitor_clipboard(&self) -> bool {
+        self.inner.state.lock().unwrap().settings.monitor_clipboard
+    }
+
     /// Apply the user's answer to a download waiting in the "New download" window: its name,
     /// folder and connections, then start it or keep it paused for later. Returns the file name it
     /// got, which gains a " (1)" when the folder already has that name.
@@ -588,11 +595,7 @@ impl Manager {
             gone
         };
         for job in &removed {
-            let token = {
-                let mut rt = job.rt.lock().unwrap();
-                rt.removed = true;
-                rt.cancel.clone()
-            };
+            let token = job.rt.lock().unwrap().cancel.clone();
             if let Some(t) = token {
                 t.cancel();
             }
@@ -727,7 +730,16 @@ fn view(job: &Job, with_segments: bool, now: Instant) -> DownloadView {
         }
     }
     let eta = record.size.filter(|_| rt.speed > 1.0).map(|size| size.saturating_sub(downloaded) as f64 / rt.speed);
-    DownloadView { downloaded, segment_count, finishing: rt.finishing.clone(), speed: rt.speed, eta, active_connections: rt.active, record }
+    DownloadView {
+        downloaded,
+        segment_count,
+        finishing: rt.finishing.clone(),
+        speed: rt.speed,
+        eta,
+        active_connections: rt.active,
+        refused_connections: rt.refused,
+        record,
+    }
 }
 
 /// Targets of unfinished downloads: a new download must not pick one of these names.
@@ -868,8 +880,10 @@ fn default_dir(settings: &Settings, category: Category) -> PathBuf {
 
 impl Inner {
     fn find(&self, ids: &[String]) -> Vec<Arc<Job>> {
+        // "pause all" names every download: a set keeps that linear instead of quadratic
+        let ids: HashSet<&str> = ids.iter().map(String::as_str).collect();
         let st = self.state.lock().unwrap();
-        st.jobs.iter().filter(|j| ids.contains(&j.rec.lock().unwrap().id)).cloned().collect()
+        st.jobs.iter().filter(|j| ids.contains(j.rec.lock().unwrap().id.as_str())).cloned().collect()
     }
 
     fn changed(&self) {
@@ -982,6 +996,7 @@ impl Inner {
             let mut rt = job.rt.lock().unwrap();
             rt.cancel = None;
             rt.active = 0;
+            rt.refused = 0;
             rt.finishing = None;
         }
         self.running.fetch_sub(1, Ordering::SeqCst);
