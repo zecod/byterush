@@ -33,11 +33,12 @@ async fn main() {
         tokio::time::sleep(Duration::from_millis(500)).await;
         let d = manager.snapshot(false).into_iter().find(|d| d.record.id == id).unwrap();
         println!(
-            "{:?} {:>6.1}% {:>8.2} MB/s  conns {}  segments {}",
+            "{:?} {:>6.1}% {:>8.2} MB/s  conns {}  refused {}  segments {}",
             d.record.status,
             d.record.size.map(|s| d.downloaded as f64 * 100.0 / s.max(1) as f64).unwrap_or(0.0),
             d.speed / 1_048_576.0,
             d.active_connections,
+            d.refused_connections,
             d.segment_count
         );
         match d.record.status {

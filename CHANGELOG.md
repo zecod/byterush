@@ -10,6 +10,35 @@ entries for people who use Byterush, not for people who read the diff.
 
 ## [Unreleased]
 
+### Added
+
+- The extension is on the Chrome Web Store. The app's setup guide, the website and the README
+  send you there first; loading it from the folder stays as the way without the store.
+  `node scripts/extension-store.mjs` makes the package to upload, and
+  `docs/CHROME_WEB_STORE.md` holds the listing.
+- A privacy page on the website, linked from the store listing: nothing leaves your computer.
+- The details panel says how many connections the server is refusing ("· 2 refused by the
+  server") when a server allows fewer connections than asked for.
+
+### Changed
+
+- Servers that cap connections per address (Hetzner's speed test, many file hosts): instead of
+  hammering them with every connection at once, the refused connections take turns, one scout
+  at a time with a growing pause, and the file is not split further while any of them waits.
+  A 1 GB file from a server that allows two connections went from 117 s to 68 s.
+- Smaller app: only the Latin files of the IBM Plex Mono font are bundled, and the download list
+  only re-renders the rows that changed.
+
+### Fixed
+
+- The hidden "New download" window kept asking the engine about its download every second, for
+  as long as the app ran, after the download had been answered.
+- On a FAT or exFAT drive, a download over a single connection first wrote the whole file as
+  zeros before the first byte arrived. The file now just grows there; NTFS is unchanged.
+- An absurd number typed into the speed limit no longer overflows into "no limit" (or a crash).
+- The clipboard watcher reads the clipboard only when its contents changed and the setting is on,
+  and the progress loop sleeps while nothing is downloading.
+
 ## [0.3.0] - 2026-10-25
 
 ### Added

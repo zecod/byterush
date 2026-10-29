@@ -206,13 +206,16 @@ export default function App() {
     return () => clearInterval(timer);
   }, [suggestSetup]);
 
-  // throughput history for the sparkline, sampled once a second
+  // throughput history for the sparkline, sampled once a second while something downloads and
+  // until the line has run back to zero; an idle app doesn't redraw itself every second
   const totalSpeed = useRef(0);
   totalSpeed.current = downloads.reduce((s, d) => s + d.speed, 0);
+  const sampling = downloads.some((d) => isWorking(d.status)) || speedHistory.some((v) => v > 0);
   useEffect(() => {
+    if (!sampling) return;
     const t = setInterval(() => setSpeedHistory((h) => [...h.slice(1), totalSpeed.current]), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [sampling]);
 
   // theme
   useEffect(() => {

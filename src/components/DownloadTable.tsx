@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { memo, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Alert02Icon, CloudDownloadIcon } from "@hugeicons/core-free-icons";
 import type { Download } from "../api";
@@ -35,7 +35,10 @@ export function ProgressBar({ d }: { d: Download }) {
   );
 }
 
-function Row({ d, selected, ...handlers }: { d: Download; selected: boolean } & Omit<Props, "downloads" | "selected" | "onAdd" | "loaded">) {
+type Handlers = Pick<Props, "onSelect" | "onActivate" | "onContextMenu">;
+
+/** Drawn again only when its download changed: a progress event redraws the moving rows, not every row in view. */
+const Row = memo(function Row({ d, selected, ...handlers }: { d: Download; selected: boolean } & Handlers) {
   const p = progress(d);
   return (
     <div
@@ -74,11 +77,23 @@ function Row({ d, selected, ...handlers }: { d: Download; selected: boolean } & 
       <div className="cell num weak">{formatDate(d.added_at)}</div>
     </div>
   );
-}
+});
 
 /** Virtualized list: only rows in view are rendered, so thousands of downloads stay smooth. */
 export function DownloadTable({ downloads, selected, onAdd, loaded, ...handlers }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  // the handlers are new closures on every render of the app; the rows get stable ones that call
+  // the latest, so a memoized row doesn't redraw for them
+  const latest = useRef<Handlers>(handlers);
+  latest.current = handlers;
+  const stable = useMemo<Handlers>(
+    () => ({
+      onSelect: (id, e) => latest.current.onSelect(id, e),
+      onActivate: (d) => latest.current.onActivate(d),
+      onContextMenu: (d, e) => latest.current.onContextMenu(d, e),
+    }),
+    [],
+  );
   const virtualizer = useVirtualizer({
     count: downloads.length,
     getScrollElement: () => scrollRef.current,
@@ -119,7 +134,7 @@ export function DownloadTable({ downloads, selected, onAdd, loaded, ...handlers 
             const d = downloads[v.index];
             return (
               <div key={v.key} className="row-slot" style={{ transform: `translateY(${v.start}px)`, height: ROW_HEIGHT }}>
-                <Row d={d} selected={selected.has(d.id)} {...handlers} />
+                <Row d={d} selected={selected.has(d.id)} {...stable} />
               </div>
             );
           })}

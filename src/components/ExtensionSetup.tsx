@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { ArrowUpRight01Icon, CheckmarkCircle02Icon, Copy01Icon, FolderOpenIcon, PuzzleIcon } from "@hugeicons/core-free-icons";
 import type { Browser, BridgeStatus, Settings } from "../api";
-import { api, formatDate, isMac } from "../api";
+import { api, formatDate, isMac, STORE_URL } from "../api";
 import { Icon } from "./icons";
 import { Modal } from "./Modal";
 
@@ -20,15 +21,73 @@ export function browserList(browsers: Browser[]) {
 }
 
 /**
- * Setting up the browser extension, step by step: open the browser's extensions page (the browsers
- * found on this computer get a button), load the extension's folder, and watch it connect. The
- * status at the top follows the extension's check-ins with the app.
+ * Loading the extension from the folder that ships with the app: the way before the store
+ * listing, and still the way on a browser that can't reach the store.
+ */
+function FolderSteps({ browsers, folder, onError }: { browsers: Browser[] | null; folder: string | null; onError: (e: unknown) => void }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    if (!folder) return;
+    await navigator.clipboard.writeText(folder).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
+  const open = (b: Browser) => api.openExtensionsPage(b.id).catch(onError);
+  return (
+    <>
+      <li>
+        <div className="step-title">open your browser's extensions page</div>
+        {browsers === null ? null : browsers.length ? (
+          <div className="setup-browsers">
+            {browsers.map((b) => (
+              <button key={b.id} className="btn" onClick={() => open(b)}>
+                {b.name} <Icon icon={ArrowUpRight01Icon} size={13} />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="hint">
+            no Chrome, Edge, Brave, Vivaldi or Opera found here: type <code>chrome://extensions</code> (or <code>edge://extensions</code>…) in
+            the address bar
+          </p>
+        )}
+      </li>
+      <li>
+        <div className="step-title">
+          turn on <b>developer mode</b>
+        </div>
+        <p className="hint">the switch at the top right of that page (in Edge: on the left)</p>
+      </li>
+      <li>
+        <div className="step-title">
+          click <b>load unpacked</b> and choose this folder
+        </div>
+        <div className="setup-folder">
+          <code className="selectable" title={folder ?? ""}>
+            {folder ?? "extension folder not found"}
+          </code>
+          <button className="btn" onClick={copy} disabled={!folder} title="copy the path">
+            <Icon icon={copied ? CheckmarkCircle02Icon : Copy01Icon} size={14} /> {copied ? "copied" : "copy"}
+          </button>
+          <button className="btn" onClick={() => api.openExtensionFolder().catch(onError)} title="open the folder">
+            <Icon icon={FolderOpenIcon} size={14} />
+          </button>
+        </div>
+        <p className="hint">paste the path into the folder dialog's address bar{isMac ? " (⌘⇧G opens it)" : ""}, or open the folder and pick it</p>
+      </li>
+    </>
+  );
+}
+
+/**
+ * Setting up the browser extension, step by step: add it from the Chrome Web Store (or, without
+ * the store, load the extension's folder from the browser's extensions page), pin it, and watch
+ * it connect. The status at the top follows the extension's check-ins with the app.
  */
 export function ExtensionSetup({ settings, onClose }: { settings: Settings; onClose: () => void }) {
   const [browsers, setBrowsers] = useState<Browser[] | null>(null);
   const [folder, setFolder] = useState<string | null>(null);
   const [bridge, setBridge] = useState<BridgeStatus | null>(null);
-  const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -44,14 +103,8 @@ export function ExtensionSetup({ settings, onClose }: { settings: Settings; onCl
   const seenEver = seenNow ?? (settings.extension_seen_ms || null);
   const browserName = bridge?.extension_browser || settings.extension_browser;
   const connected = seenNow != null && Date.now() - seenNow < 6 * 60 * 1000;
-
-  const copy = async () => {
-    if (!folder) return;
-    await navigator.clipboard.writeText(folder).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1600);
-  };
-  const open = (b: Browser) => api.openExtensionsPage(b.id).catch((e) => setError(String(e)));
+  const fail = (e: unknown) => setError(String(e));
+  const folderSteps = <FolderSteps browsers={browsers} folder={folder} onError={fail} />;
 
   return (
     <Modal title="browser extension" onClose={onClose} width={620}>
@@ -78,48 +131,22 @@ export function ExtensionSetup({ settings, onClose }: { settings: Settings; onCl
         </div>
 
         <ol className="setup-steps">
-          <li>
-            <div className="step-title">open your browser's extensions page</div>
-            {browsers === null ? null : browsers.length ? (
+          {STORE_URL ? (
+            <li>
+              <div className="step-title">add it from the Chrome Web Store</div>
               <div className="setup-browsers">
-                {browsers.map((b) => (
-                  <button key={b.id} className="btn" onClick={() => open(b)}>
-                    {b.name} <Icon icon={ArrowUpRight01Icon} size={13} />
-                  </button>
-                ))}
+                <button className="btn primary" onClick={() => openUrl(STORE_URL).catch(fail)}>
+                  open the Chrome Web Store <Icon icon={ArrowUpRight01Icon} size={13} />
+                </button>
               </div>
-            ) : (
               <p className="hint">
-                no Chrome, Edge, Brave, Vivaldi or Opera found here: type <code>chrome://extensions</code> (or <code>edge://extensions</code>…) in
-                the address bar
+                Chrome, Brave and Vivaldi: click <b>add to Chrome</b>. Edge: first <b>allow extensions from other stores</b> in the bar at the top of
+                the store page, then <b>get</b>. Opera: needs its "Install Chrome extensions" add-on first.
               </p>
-            )}
-          </li>
-          <li>
-            <div className="step-title">
-              turn on <b>developer mode</b>
-            </div>
-            <p className="hint">the switch at the top right of that page (in Edge: on the left)</p>
-          </li>
-          <li>
-            <div className="step-title">
-              click <b>load unpacked</b> and choose this folder
-            </div>
-            <div className="setup-folder">
-              <code className="selectable" title={folder ?? ""}>
-                {folder ?? "extension folder not found"}
-              </code>
-              <button className="btn" onClick={copy} disabled={!folder} title="copy the path">
-                <Icon icon={copied ? CheckmarkCircle02Icon : Copy01Icon} size={14} /> {copied ? "copied" : "copy"}
-              </button>
-              <button className="btn" onClick={() => api.openExtensionFolder().catch((e) => setError(String(e)))} title="open the folder">
-                <Icon icon={FolderOpenIcon} size={14} />
-              </button>
-            </div>
-            <p className="hint">
-              paste the path into the folder dialog's address bar{isMac ? " (⌘⇧G opens it)" : ""}, or open the folder and pick it
-            </p>
-          </li>
+            </li>
+          ) : (
+            folderSteps
+          )}
           <li>
             <div className="step-title">pin byterush to the toolbar</div>
             <p className="hint">
@@ -135,6 +162,12 @@ export function ExtensionSetup({ settings, onClose }: { settings: Settings; onCl
             </p>
           </li>
         </ol>
+        {STORE_URL && (
+          <details className="setup-manual">
+            <summary>no access to the store (a managed browser, or offline)? load it from a folder</summary>
+            <ol className="setup-steps">{folderSteps}</ol>
+          </details>
+        )}
         {error && <p className="error-text">{error}</p>}
       </div>
       <div className="modal-actions">

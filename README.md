@@ -136,13 +136,15 @@ Every release lists SHA-256 checksums in `SHA256SUMS.txt`. Until code signing is
 
 ## Browser extension
 
-The extension in [`extension/`](extension) hands browser downloads to the app; it ships inside the app and as `byterush-extension-<version>.zip` on every release.
+The extension in [`extension/`](extension) hands browser downloads to the app.
 
-1. In Byterush, open **Settings → 03 · browser → set up the extension…**. The guide shows the extension's folder with a copy button, opens the extensions page of each Chromium browser it finds (Chrome, Edge, Brave, Vivaldi, Opera, Chromium), and turns green once the extension checks in. Until then, the main window suggests it.
-2. Turn on **Developer mode**, click **Load unpacked** and pick that folder.
+1. Install and start Byterush.
+2. Add the extension from the **[Chrome Web Store](https://chromewebstore.google.com/detail/STORE_ID_TODO)**. Chrome, Brave and Vivaldi install it directly; Edge first asks to *allow extensions from other stores*; Opera needs its *Install Chrome extensions* add-on.
 3. Pin it, and to catch private windows too: **Details → Allow in Incognito**.
 
-The [setup page](https://zecod.github.io/byterush-frontend/setup.html) walks through the same steps for each browser, checks live that the extension is loaded and reaches the app, and lists why a download can stay in the browser.
+In Byterush, **Settings → 03 · browser → set up the extension…** has the same steps with a button to the store, and turns green once the extension checks in; until then, the main window suggests it. The [setup page](https://zecod.github.io/byterush-frontend/setup.html) checks live that the extension is loaded and reaches the app, and lists why a download can stay in the browser.
+
+Without the store (a managed browser, or offline), the same extension loads from a folder: it ships inside the app (the setup guide shows the folder with a copy button and opens the extensions page of each Chromium browser it finds) and as `byterush-extension-<version>.zip` on every release. Turn on **Developer mode** on the browser's extensions page, click **Load unpacked** and pick the folder. Publishing a new version to the store is described in [docs/CHROME_WEB_STORE.md](docs/CHROME_WEB_STORE.md).
 
 How it decides: while Chrome is choosing the file name, the extension sends the download to the app together with the exact request headers Chrome used. The app opens its first connection and compares the answer with what the browser was getting (a web page instead of the file means a login or bot check; a different size means a different file). Only when it's the same file is Chrome's copy cancelled; otherwise Chrome carries on as if nothing happened. If you start a download again whose link had expired, the paused download in Byterush continues from the new link instead of starting over.
 
@@ -152,7 +154,7 @@ Then the **New download** window opens on top of the browser: the file's name an
 
 When a download stays in the browser, you are told why: the extension's popup lists the last hand-overs with the reason, and the app shows a notice when it tried and couldn't (the server refused, a different file came back). A busy server (429, 502, 503, 504, or a dropped first connection) is asked again twice, after what it asks for in `Retry-After` up to three seconds, before the browser keeps the download.
 
-It needs these permissions: `downloads` (to see and hand over downloads), `webRequest` + `cookies` (to replay your session for the same URL), `contextMenus`, `storage`, `alarms` (to check in with the app every 5 minutes, so the setup guide knows it is installed), and access to all sites (downloads can come from anywhere). It talks only to the app on `127.0.0.1:51723`, and the app accepts calls from this extension only. The setup page can ask it one thing, whether it is installed and reaches the app (`externally_connectable`, limited to `zecod.github.io` and `localhost`).
+It needs these permissions: `downloads` (to see and hand over downloads), `webRequest` + `cookies` (to replay your session for the same URL), `contextMenus`, `storage`, `alarms` (to check in with the app every 5 minutes, so the setup guide knows it is installed), and access to all sites (downloads can come from anywhere). It talks only to the app on `127.0.0.1:51723`, and the app accepts calls from this extension only (the store build and the folder's pinned id). The setup page can ask it one thing, whether it is installed and reaches the app (`externally_connectable`, limited to `zecod.github.io` and `localhost`). What it does with your data, in full: the [privacy page](https://zecod.github.io/byterush-frontend/privacy.html).
 
 ## How it works
 

@@ -32,6 +32,8 @@ export interface Download {
   speed: number;
   eta: number | null;
   active_connections: number;
+  /** Connections the server refused that wait to try again. */
+  refused_connections: number;
 }
 
 export interface Settings {
@@ -203,6 +205,14 @@ export const statusLabel: Record<Status, string> = {
 };
 
 export const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
+
+/**
+ * The extension's item id on the Chrome Web Store, "" until the listing exists (the store assigns
+ * it at the first upload; see docs/CHROME_WEB_STORE.md). Without it the setup guide shows the
+ * folder steps only.
+ */
+export const STORE_ID = "";
+export const STORE_URL = STORE_ID ? `https://chromewebstore.google.com/detail/${STORE_ID}` : "";
 
 /** Shortcut label in the platform's style: "⌘N" on macOS, "ctrl+n" elsewhere. */
 export const shortcut = (key: string) => (isMac ? `⌘${key.toUpperCase()}` : `ctrl+${key.toLowerCase()}`);
