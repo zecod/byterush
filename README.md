@@ -239,4 +239,4 @@ Bug reports, ideas and pull requests are welcome: start with [`CONTRIBUTING.md`]
 
 ## License
 
-[MIT](LICENSE) © zecod and the Byterush contributors. Interface font: IBM Plex Mono (SIL Open Font License). Icons: [Hugeicons](https://hugeicons.com) free set. The demo videos are made with [Remotion](https://www.remotion.dev), which has its own license for companies.
+[MIT](LICENSE) © zecod and the Byterush contributors. Interface font: Geist (SIL Open Font License). Icons: [Hugeicons](https://hugeicons.com) free set. The demo videos are made with [Remotion](https://www.remotion.dev), which has its own license for companies.
