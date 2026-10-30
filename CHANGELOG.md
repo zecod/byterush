@@ -10,6 +10,8 @@ entries for people who use Byterush, not for people who read the diff.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-30
+
 ### Added
 
 - The extension is on the Chrome Web Store. The app's setup guide, the website and the README
@@ -138,6 +140,7 @@ entries for people who use Byterush, not for people who read the diff.
 - Browser extension for Chrome and Edge that hands downloads over to the app together with the
   browser session (cookies, user-agent, referer).
 
-[Unreleased]: https://github.com/zecod/byterush/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/zecod/byterush/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/zecod/byterush/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/zecod/byterush/compare/159ef6f311413b1bcee12d23a895d803621515f4...v0.3.0
 [0.2.0]: https://github.com/zecod/byterush/tree/159ef6f311413b1bcee12d23a895d803621515f4
