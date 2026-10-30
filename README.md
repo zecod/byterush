@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="https://zecod.github.io/byterush-frontend/"><b>Website</b></a> ·
+  <a href="https://byterush.xyz/"><b>Website</b></a> ·
   <a href="#download">Download</a> ·
   <a href="#benchmarks">Benchmarks</a> ·
   <a href="#browser-extension">Browser extension</a> ·
@@ -27,11 +27,11 @@
 </p>
 
 <p align="center">
-  <a href="https://zecod.github.io/byterush-frontend/#demo">
+  <a href="https://byterush.xyz/#demo">
     <img src="docs/media/demo.gif" width="860" alt="Two real screen recordings side by side, timed from the click: the same 961 MB file from archive.org in Chrome alone, and in Chrome with Byterush after its New download window. Byterush is done after 17.2 seconds; Chrome alone takes 13 minutes 2 seconds.">
   </a>
   <br>
-  <sub>▶ <a href="https://zecod.github.io/byterush-frontend/#demo">Watch the demo</a>: the click, the New download window, then Chrome alone against Chrome with Byterush · also on 10.7 GB: <a href="#10-gb-screen-recorded">10.4× faster</a></sub>
+  <sub>▶ <a href="https://byterush.xyz/#demo">Watch the demo</a>: the click, the New download window, then Chrome alone against Chrome with Byterush · also on 10.7 GB: <a href="#10-gb-screen-recorded">10.4× faster</a></sub>
 </p>
 
 ## Why Byterush
@@ -75,11 +75,11 @@ Many small files are fast too: 500 files of 48 KB finish in **0.36 s** with thre
 Hetzner's 10.7 GB test file, clicked in Chrome twice, one take right after the other: once on its own, once with the extension handing it to the Byterush app (16 connections). From Helsinki, one connection managed about 19 MB/s; Byterush finished in **55.1 s** against Chrome's **9 min 34 s**. From Falkenstein, closer, Chrome took 5 min 37 s and Byterush 50.1 s. Byterush was writing as fast as the VM's disk allowed both times.
 
 <p align="center">
-  <a href="https://zecod.github.io/byterush-frontend/#demo">
+  <a href="https://byterush.xyz/#demo">
     <img src="docs/media/demo-10gb-helsinki.gif" width="860" alt="Two real screen recordings side by side: the same 10.7 GB file from Hetzner Helsinki in Chrome alone and in Chrome with Byterush. Byterush's window shows 16 ranges filling at about 210 MB/s and is done after 55 seconds; Chrome's side then fast-forwards until it is done after 9 minutes 34 seconds.">
   </a>
   <br>
-  <sub>▶ Both 10 GB races in full, with the click and the New download window, on the <a href="https://zecod.github.io/byterush-frontend/#demo">website</a></sub>
+  <sub>▶ Both 10 GB races in full, with the click and the New download window, on the <a href="https://byterush.xyz/#demo">website</a></sub>
 </p>
 
 ## Features
@@ -123,7 +123,7 @@ Hetzner's 10.7 GB test file, clicked in Chrome twice, one take right after the o
 
 ## Download
 
-Get the latest version from **[Releases](https://github.com/zecod/byterush/releases/latest)** or from the [website](https://zecod.github.io/byterush-frontend/#download), which picks the right file for your system.
+Get the latest version from **[Releases](https://github.com/zecod/byterush/releases/latest)** or from the [website](https://byterush.xyz/#download), which picks the right file for your system.
 
 | System | File |
 |---|---|
@@ -142,7 +142,7 @@ The extension in [`extension/`](extension) hands browser downloads to the app.
 2. Add the extension from the **[Chrome Web Store](https://chromewebstore.google.com/detail/STORE_ID_TODO)**. Chrome, Brave and Vivaldi install it directly; Edge first asks to *allow extensions from other stores*; Opera needs its *Install Chrome extensions* add-on.
 3. Pin it, and to catch private windows too: **Details → Allow in Incognito**.
 
-In Byterush, **Settings → 03 · browser → set up the extension…** has the same steps with a button to the store, and turns green once the extension checks in; until then, the main window suggests it. The [setup page](https://zecod.github.io/byterush-frontend/setup.html) checks live that the extension is loaded and reaches the app, and lists why a download can stay in the browser.
+In Byterush, **Settings → 03 · browser → set up the extension…** has the same steps with a button to the store, and turns green once the extension checks in; until then, the main window suggests it. The [setup page](https://byterush.xyz/setup) checks live that the extension is loaded and reaches the app, and lists why a download can stay in the browser.
 
 Without the store (a managed browser, or offline), the same extension loads from a folder: it ships inside the app (the setup guide shows the folder with a copy button and opens the extensions page of each Chromium browser it finds) and as `byterush-extension-<version>.zip` on every release. Turn on **Developer mode** on the browser's extensions page, click **Load unpacked** and pick the folder. Publishing a new version to the store is described in [docs/CHROME_WEB_STORE.md](docs/CHROME_WEB_STORE.md).
 
@@ -154,7 +154,7 @@ Then the **New download** window opens on top of the browser: the file's name an
 
 When a download stays in the browser, you are told why: the extension's popup lists the last hand-overs with the reason, and the app shows a notice when it tried and couldn't (the server refused, a different file came back). A busy server (429, 502, 503, 504, or a dropped first connection) is asked again twice, after what it asks for in `Retry-After` up to three seconds, before the browser keeps the download.
 
-It needs these permissions: `downloads` (to see and hand over downloads), `webRequest` + `cookies` (to replay your session for the same URL), `contextMenus`, `storage`, `alarms` (to check in with the app every 5 minutes, so the setup guide knows it is installed), and access to all sites (downloads can come from anywhere). It talks only to the app on `127.0.0.1:51723`, and the app accepts calls from this extension only (the store build and the folder's pinned id). The setup page can ask it one thing, whether it is installed and reaches the app (`externally_connectable`, limited to `zecod.github.io` and `localhost`). What it does with your data, in full: the [privacy page](https://zecod.github.io/byterush-frontend/privacy.html).
+It needs these permissions: `downloads` (to see and hand over downloads), `webRequest` + `cookies` (to replay your session for the same URL), `contextMenus`, `storage`, `alarms` (to check in with the app every 5 minutes, so the setup guide knows it is installed), and access to all sites (downloads can come from anywhere). It talks only to the app on `127.0.0.1:51723`, and the app accepts calls from this extension only (the store build and the folder's pinned id). The setup page can ask it one thing, whether it is installed and reaches the app (`externally_connectable`, limited to `byterush.xyz` and `localhost`). What it does with your data, in full: the [privacy page](https://byterush.xyz/privacy).
 
 ## How it works
 

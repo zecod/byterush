@@ -33,6 +33,9 @@ entries for people who use Byterush, not for people who read the diff.
 
 ### Fixed
 
+- The website moved to https://byterush.xyz. The popup's "setup guide" link opens it, and its
+  setup page can check that the extension is installed; both pointed at the old address, which is
+  no longer online.
 - The hidden "New download" window kept asking the engine about its download every second, for
   as long as the app ran, after the download had been answered.
 - On a FAT or exFAT drive, a download over a single connection first wrote the whole file as

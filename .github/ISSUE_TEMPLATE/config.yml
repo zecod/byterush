@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/zecod/byterush/security/advisories/new
     about: Please report security problems privately, not as a public issue.
   - name: Download Byterush
-    url: https://zecod.github.io/byterush-frontend/
+    url: https://byterush.xyz/
     about: Installers for Windows, macOS and Linux, and the browser extension.

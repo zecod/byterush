@@ -19,6 +19,12 @@ const src = path.join(root, "extension");
 const manifest = JSON.parse(fs.readFileSync(path.join(src, "manifest.json"), "utf8"));
 const out = path.resolve(process.argv[2] ?? path.join(root, "dist-extension", `byterush-extension-store-${manifest.version}.zip`));
 
+// the store refuses a description over 132 characters
+if (manifest.description.length > 132) {
+  console.error(`manifest.json: the description is ${manifest.description.length} characters, the store allows 132`);
+  process.exit(1);
+}
+
 /** Every file under `dir`, as "a/b/c.ext" names, sorted; dotfiles left out. */
 function walk(dir, prefix = "") {
   const names = [];

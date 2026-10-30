@@ -1,11 +1,11 @@
 [package]
 name = "byterush"
-version = "0.3.0"
+version = "0.3.1"
 description = "Byterush - a fast segmented download manager"
 authors = ["zecod"]
 license = "MIT"
 repository = "https://github.com/zecod/byterush"
-homepage = "https://zecod.github.io/byterush-frontend/"
+homepage = "https://byterush.xyz/"
 edition = "2024"
 
 [lib]

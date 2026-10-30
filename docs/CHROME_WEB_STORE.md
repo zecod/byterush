@@ -51,7 +51,7 @@ What the extension does
 • A switch per site, for sites that need the browser.
 
 It needs the free, open-source Byterush app (Windows, macOS, Linux):
-https://zecod.github.io/byterush-frontend/
+https://byterush.xyz/
 
 Privacy: the extension talks only to the app on your own computer (127.0.0.1). It reads the
 request headers of the download it hands over and nothing else. No account, no analytics,
@@ -64,7 +64,7 @@ nothing sent anywhere. Source code: https://github.com/zecod/byterush
 screenshots (1280×800) and the small promo tile (440×280) made from the landing page, see
 below; no marquee tile.
 
-**Store listing → Additional fields**: homepage `https://zecod.github.io/byterush-frontend/`,
+**Store listing → Additional fields**: homepage `https://byterush.xyz/`,
 support `https://github.com/zecod/byterush/issues`.
 
 **Privacy → Single purpose**
@@ -94,7 +94,7 @@ Certifications: all three ticked (not sold, not used for unrelated purposes, not
 creditworthiness). The data is handed to a program on the user's own computer and never to a
 server.
 
-**Privacy → Privacy policy**: `https://zecod.github.io/byterush-frontend/privacy.html`
+**Privacy → Privacy policy**: `https://byterush.xyz/privacy`
 
 **Distribution**: public, all regions, free.
 
