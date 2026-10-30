@@ -60,7 +60,7 @@ suffixes in an extension version, and Windows Installer allows at most `255.255.
 6. Follow the run under *Actions → Release*. It takes about half an hour, most of it the
    optimized Rust builds. When it's done, check the
    [release page](https://github.com/zecod/byterush/releases/latest) and the
-   [landing page](https://zecod.github.io/byterush-frontend/).
+   [landing page](https://byterush.xyz/).
 
 ## What the workflow does
 

@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "Byterush — download catcher",
   "short_name": "Byterush",
-  "version": "0.3.0",
-  "description": "Hands your browser downloads to the Byterush app: parallel connections, resume, and the same session cookies so protected sites keep working.",
+  "version": "0.3.1",
+  "description": "Hands browser downloads to the Byterush app: parallel connections, resume, and your cookies so protected sites keep working.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAo5kDk9wO+pKu02hlSBEg3DBiRR0znbqhLhex6M/8MPRS7zMrv8B101IR0j/uHl4ZS4rmrOpnitWD73DX0vhX/3pekNMvWJ2gepFnqaf/uGhXtZaDrIvZPWfSuP1lnrEncZREfDO867kboIKnCMrJ02iMBAowC0JvfZNFmRJ+bVEAgx3fLAjKAx4VqUGU+yBGiTZgN3iXUxFWs/PXvFahWXnmHSjnuwFNvRgn1I0lsNkCEzXhbpHN+7CmSHkBuBQKlhfvrJJg/Oqu/xt3WBcwGahBmdRxaIKIKxJ5BqRuATuh7wpMTd2uw3MBJDqiper4P2nrb+fVsLkT1tncENV0gQIDAQAB",
   "minimum_chrome_version": "116",
   "permissions": [
@@ -37,7 +37,7 @@
   },
   "externally_connectable": {
     "matches": [
-      "https://zecod.github.io/*",
+      "https://byterush.xyz/*",
       "http://localhost/*",
       "http://127.0.0.1/*"
     ]
