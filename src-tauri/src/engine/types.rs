@@ -310,3 +310,19 @@ fn yes() -> bool {
 pub fn now_ms() -> u64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
+
+/// One of Byterush's partial files on disk (see `Manager::temp_files`).
+#[derive(Clone, Debug, Serialize)]
+pub struct TempFile {
+    pub path: String,
+    pub size: u64,
+    /// No download on the list owns it: safe to delete.
+    pub leftover: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct TempFiles {
+    /// Where new partial files go (the temporary folder, or the download folder without one).
+    pub dir: String,
+    pub files: Vec<TempFile>,
+}

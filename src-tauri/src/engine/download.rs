@@ -1067,6 +1067,17 @@ fn segment_file(base: &Path, idx: usize) -> PathBuf {
     PathBuf::from(s)
 }
 
+/// The part file a partial file belongs to: itself for "x.byterush" and "x.byterush-tmp",
+/// "x.byterush" for a per-segment "x.byterush.3". `None` for anything else.
+pub(crate) fn part_base(path: &Path) -> Option<PathBuf> {
+    let name = path.file_name()?.to_string_lossy().into_owned();
+    if name.ends_with(".byterush") || name.ends_with(".byterush-tmp") {
+        return Some(path.to_path_buf());
+    }
+    let (base, idx) = name.rsplit_once('.')?;
+    (base.ends_with(".byterush") && !idx.is_empty() && idx.chars().all(|c| c.is_ascii_digit())).then(|| path.with_file_name(base))
+}
+
 /// Delete a download's partial data: the single part file and any per-segment files.
 pub(crate) fn remove_part_files(base: &Path) {
     let _ = std::fs::remove_file(base);

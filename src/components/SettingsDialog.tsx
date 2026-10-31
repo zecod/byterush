@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpenIcon, PuzzleIcon } from "@hugeicons/core-free-icons";
-import type { BridgeStatus, Settings } from "../api";
-import { api, formatDate } from "../api";
+import type { BridgeStatus, Settings, TempFiles } from "../api";
+import { api, formatBytes, formatDate } from "../api";
 import { ExtensionSetup } from "./ExtensionSetup";
 import { Icon } from "./icons";
 import { Modal } from "./Modal";
@@ -107,6 +107,53 @@ function BrowserSection({ s, set }: { s: Settings; set: <K extends keyof Setting
   );
 }
 
+/**
+ * Where the partial files are, how much room they take, and the leftovers no download owns any
+ * more (a crash, or an older version that kept them when a download was removed).
+ */
+function TempFilesInfo() {
+  const [temp, setTemp] = useState<TempFiles | null>(null);
+  const [error, setError] = useState("");
+  const load = () => api.tempFiles().then(setTemp).catch((e) => setError(String(e)));
+  useEffect(() => {
+    load();
+  }, []);
+  if (!temp) return error ? <p className="error-text">{error}</p> : null;
+  const sum = (fs: TempFiles["files"]) => fs.reduce((n, f) => n + f.size, 0);
+  const inUse = temp.files.filter((f) => !f.leftover);
+  const leftover = temp.files.filter((f) => f.leftover);
+  const clean = () =>
+    api
+      .cleanTempFiles()
+      .then(load)
+      .catch((e) => setError(String(e)));
+  return (
+    <div className="temp-files">
+      <div className="temp-files-line">
+        <span className="muted">
+          partial files now in <code className="selectable">{temp.dir}</code>
+          {" · "}
+          {inUse.length ? `${inUse.length} in use, ${formatBytes(sum(inUse))}` : "none in use"}
+        </span>
+        <button className="btn" onClick={() => api.openTempFolder().catch((e) => setError(String(e)))} title="open the folder">
+          <Icon icon={FolderOpenIcon} size={14} />
+        </button>
+      </div>
+      {leftover.length > 0 && (
+        <div className="temp-files-line">
+          <span>
+            <b>{leftover.length} left over</b> from removed or crashed downloads · {formatBytes(sum(leftover))}
+          </span>
+          <button className="btn danger" onClick={clean} title={leftover.map((f) => f.path).join("\n")}>
+            delete
+          </button>
+        </div>
+      )}
+      {error && <p className="error-text">{error}</p>}
+    </div>
+  );
+}
+
 export function SettingsDialog({ settings, onSave, onClose }: Props) {
   const [s, setS] = useState<Settings>(settings);
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) => setS((prev) => ({ ...prev, [key]: value }));
@@ -123,6 +170,7 @@ export function SettingsDialog({ settings, onSave, onClose }: Props) {
           onChange={(v) => set("temp_dir", v)}
           hint="partial files live here while downloading, then move to the download folder. a fast SSD helps."
         />
+        <TempFilesInfo />
         <label className="check">
           <input type="checkbox" checked={s.category_subfolders} onChange={(e) => set("category_subfolders", e.target.checked)} />
           <span>sort files into category folders (video, music, documents…)</span>

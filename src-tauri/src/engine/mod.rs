@@ -600,7 +600,10 @@ impl Manager {
                 t.cancel();
             }
         }
-        if delete_files {
+        // an unfinished download's partial data goes with it whatever `delete_files` says: once
+        // the download is off the list nothing can resume it, and it would only hold the disk
+        // space (a 6 GB game reserves 6 GB up front). `delete_files` is about finished files.
+        {
             self.inner.runtime.spawn(async move {
                 for job in removed {
                     // the part file stays open until the connections stop
@@ -618,7 +621,7 @@ impl Manager {
                     };
                     download::remove_part_files(&part);
                     let _ = std::fs::remove_file(naming::staging_path(&target));
-                    if completed {
+                    if completed && delete_files {
                         let _ = std::fs::remove_file(&target);
                     }
                 }
@@ -626,6 +629,73 @@ impl Manager {
         }
         self.inner.changed();
         self.inner.pump();
+    }
+
+    /// Byterush's partial files on disk: in the temporary folder, the download folder (and its
+    /// category folders) and every listed download's folder. A file no download on the list owns is
+    /// left over (a crash, an older version that kept it on remove) and can only be deleted.
+    pub fn temp_files(&self) -> TempFiles {
+        let (dirs, owned) = {
+            let st = self.inner.state.lock().unwrap();
+            let mut dirs: Vec<PathBuf> = Vec::new();
+            let download_dir = PathBuf::from(&st.settings.download_dir);
+            for dir in [st.settings.temp_dir.trim(), st.settings.download_dir.trim()] {
+                if !dir.is_empty() {
+                    dirs.push(PathBuf::from(dir));
+                }
+            }
+            if let Ok(entries) = std::fs::read_dir(&download_dir) {
+                dirs.extend(entries.flatten().map(|e| e.path()).filter(|p| p.is_dir()));
+            }
+            let mut owned = HashSet::new();
+            for job in &st.jobs {
+                let r = job.rec.lock().unwrap();
+                dirs.push(PathBuf::from(&r.dir));
+                let target = PathBuf::from(&r.dir).join(&r.file_name);
+                owned.insert(naming::staging_path(&target));
+                owned.insert(r.part_path.as_deref().map(PathBuf::from).unwrap_or_else(|| naming::part_path(&target)));
+            }
+            (dirs, owned)
+        };
+        let mut seen = HashSet::new();
+        let mut files = Vec::new();
+        for dir in dirs {
+            if !seen.insert(dir.clone()) {
+                continue;
+            }
+            let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let Some(base) = download::part_base(&path) else { continue };
+                let Ok(meta) = entry.metadata() else { continue };
+                if !meta.is_file() {
+                    continue;
+                }
+                files.push(TempFile {
+                    path: path.to_string_lossy().into_owned(),
+                    size: meta.len(),
+                    leftover: !owned.contains(&base),
+                });
+            }
+        }
+        files.sort_by(|a, b| b.size.cmp(&a.size));
+        let temp_dir = {
+            let st = self.inner.state.lock().unwrap();
+            let dir = st.settings.temp_dir.trim();
+            if dir.is_empty() { st.settings.download_dir.clone() } else { dir.to_string() }
+        };
+        TempFiles { dir: temp_dir, files }
+    }
+
+    /// Delete the partial files no listed download owns. Returns the bytes freed.
+    pub fn clean_temp_files(&self) -> u64 {
+        let mut freed = 0;
+        for f in self.temp_files().files.into_iter().filter(|f| f.leftover) {
+            if std::fs::remove_file(&f.path).is_ok() {
+                freed += f.size;
+            }
+        }
+        freed
     }
 
     /// Final file when complete, otherwise the folder it will land in.

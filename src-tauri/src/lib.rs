@@ -118,6 +118,12 @@ fn open_extensions_page(id: String) -> Result<(), String> {
     browsers::open_extensions_page(&id)
 }
 
+/// Open a web page (the store listing) in one of the browsers found here.
+#[tauri::command(async)]
+fn open_in_browser(id: String, url: String) -> Result<(), String> {
+    browsers::open_page(&id, &url)
+}
+
 #[tauri::command(async)]
 fn open_extension_folder(app: AppHandle) -> Result<String, String> {
     let shown = shown_extension_dir(&app).ok_or("extension folder not found")?;
@@ -208,6 +214,25 @@ fn asking_now(asking: State<'_, AskState>) -> Option<String> {
 #[tauri::command(async)]
 fn ask_download(app: AppHandle, id: String) {
     ask(&app, &id, true);
+}
+
+/// Byterush's partial files on disk, for the settings' storage section.
+#[tauri::command(async)]
+fn temp_files(manager: State<'_, Manager>) -> engine::TempFiles {
+    manager.temp_files()
+}
+
+/// Show the folder new partial files go to.
+#[tauri::command(async)]
+fn open_temp_folder(app: AppHandle, manager: State<'_, Manager>) -> Result<(), String> {
+    let dir = manager.temp_files().dir;
+    app.opener().open_path(&dir, None::<&str>).map_err(|e| e.to_string())
+}
+
+/// Delete the partial files no download on the list owns; the bytes freed.
+#[tauri::command(async)]
+fn clean_temp_files(manager: State<'_, Manager>) -> u64 {
+    manager.clean_temp_files()
 }
 
 #[tauri::command(async)]
@@ -571,6 +596,9 @@ pub fn run() {
             asking_now,
             ask_download,
             disk_space,
+            temp_files,
+            clean_temp_files,
+            open_temp_folder,
             get_settings,
             save_settings,
             open_download,
@@ -579,6 +607,7 @@ pub fn run() {
             open_extension_folder,
             extension_folder,
             installed_browsers,
+            open_in_browser,
             open_extensions_page,
         ])
         .build(tauri::generate_context!())

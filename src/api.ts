@@ -108,9 +108,19 @@ export interface BridgeStatus {
 
 /** A browser the extension can be installed in, found on this computer. */
 export interface Browser {
-  id: "chrome" | "edge" | "brave" | "vivaldi" | "opera" | "chromium";
+  /** "chrome", "edge", "brave", "vivaldi", "opera", "chromium", or "other:<name>" for another
+   * Chromium-based browser found as the default one (Arc, Helium…). */
+  id: string;
   name: string;
   extensions_page: string;
+  /** The system's default web browser (listed first). */
+  default: boolean;
+}
+
+export interface TempFiles {
+  /** Where new partial files go. */
+  dir: string;
+  files: { path: string; size: number; leftover: boolean }[];
 }
 
 export interface Delta {
@@ -137,7 +147,10 @@ export const api = {
   openExtensionFolder: () => invoke<string>("open_extension_folder"),
   extensionFolder: () => invoke<string | null>("extension_folder"),
   installedBrowsers: () => invoke<Browser[]>("installed_browsers"),
+  /** In a new window of the browser already running (its last used profile), or by starting it. */
   openExtensionsPage: (id: Browser["id"]) => invoke<void>("open_extensions_page", { id }),
+  /** A web page (the store listing) in that browser, the same way. */
+  openInBrowser: (id: Browser["id"], url: string) => invoke<void>("open_in_browser", { id, url }),
   /** Returns the file name the download got (" (1)" added when the folder has that name). */
   confirm: (id: string, choice: Confirmation) => invoke<string>("confirm_download", { id, choice }),
   /** "Cancel" in the "New download" window: drop the download and what it wrote. */
@@ -147,6 +160,11 @@ export const api = {
   /** Show the "New download" window again for a download waiting for an answer. */
   ask: (id: string) => invoke<void>("ask_download", { id }),
   diskSpace: (dir: string) => invoke<DiskSpace | null>("disk_space", { dir }),
+  /** Byterush's partial files on disk; `leftover` ones belong to no download on the list. */
+  tempFiles: () => invoke<TempFiles>("temp_files"),
+  /** Delete the leftover partial files; returns the bytes freed. */
+  cleanTempFiles: () => invoke<number>("clean_temp_files"),
+  openTempFolder: () => invoke<void>("open_temp_folder"),
 };
 
 export const isActive = (s: Status) => s === "downloading" || s === "connecting";

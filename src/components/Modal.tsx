@@ -60,8 +60,9 @@ export function ConfirmDelete({ count, onConfirm, onClose }: ConfirmProps) {
       >
         <label className="check">
           <input type="checkbox" name="files" />
-          <span>also delete the files from disk</span>
+          <span>also delete the finished files from disk</span>
         </label>
+        <p className="hint">the partial data of unfinished downloads is always deleted.</p>
         <div className="modal-actions">
           <div className="spacer" />
           <button type="button" className="btn ghost" onClick={onClose}>
