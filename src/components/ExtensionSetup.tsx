@@ -40,14 +40,15 @@ function FolderSteps({ browsers, folder, onError }: { browsers: Browser[] | null
         {browsers === null ? null : browsers.length ? (
           <div className="setup-browsers">
             {browsers.map((b) => (
-              <button key={b.id} className="btn" onClick={() => open(b)}>
-                {b.name} <Icon icon={ArrowUpRight01Icon} size={13} />
+              <button key={b.id} className={`btn ${b.default ? "primary" : ""}`} onClick={() => open(b)}>
+                {b.name}
+                {b.default && <span className="browser-default">default</span>} <Icon icon={ArrowUpRight01Icon} size={13} />
               </button>
             ))}
           </div>
         ) : (
           <p className="hint">
-            no Chrome, Edge, Brave, Vivaldi or Opera found here: type <code>chrome://extensions</code> (or <code>edge://extensions</code>…) in
+            no Chrome, Edge, Brave, Vivaldi, Opera or other Chromium browser found here: type <code>chrome://extensions</code> (or <code>edge://extensions</code>…) in
             the address bar
           </p>
         )}
@@ -104,6 +105,10 @@ export function ExtensionSetup({ settings, onClose }: { settings: Settings; onCl
   const browserName = bridge?.extension_browser || settings.extension_browser;
   const connected = seenNow != null && Date.now() - seenNow < 6 * 60 * 1000;
   const fail = (e: unknown) => setError(String(e));
+  // the store opens in the default browser when it can take the extension, else in the first
+  // Chromium browser found; with none, wherever the system opens links
+  const storeBrowser = browsers?.[0] ?? null;
+  const openStore = () => (storeBrowser ? api.openInBrowser(storeBrowser.id, STORE_URL) : openUrl(STORE_URL)).catch(fail);
   const folderSteps = <FolderSteps browsers={browsers} folder={folder} onError={fail} />;
 
   return (
@@ -135,8 +140,8 @@ export function ExtensionSetup({ settings, onClose }: { settings: Settings; onCl
             <li>
               <div className="step-title">add it from the Chrome Web Store</div>
               <div className="setup-browsers">
-                <button className="btn primary" onClick={() => openUrl(STORE_URL).catch(fail)}>
-                  open the Chrome Web Store <Icon icon={ArrowUpRight01Icon} size={13} />
+                <button className="btn primary" onClick={openStore}>
+                  open the Chrome Web Store{storeBrowser ? ` in ${storeBrowser.name}` : ""} <Icon icon={ArrowUpRight01Icon} size={13} />
                 </button>
               </div>
               <p className="hint">

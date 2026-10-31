@@ -174,13 +174,19 @@ kbd {
   flex: none;
 }
 
-/* macOS overlay title bar: leave room for the traffic lights */
+/* macOS overlay title bar: leave room for the traffic lights, which tauri.macos.conf.json pins at
+   18,28 so that they sit centred in this bar (three ~14px buttons, 18px apart: about 78px). Full
+   screen hides them. */
 .topbar.mac {
-  padding-left: 86px;
+  padding-left: 96px;
+}
+
+.topbar.mac.fullscreen {
+  padding-left: 18px;
 }
 
 .topbar.mac .brand {
-  width: 128px;
+  width: auto;
 }
 
 .brand .logo {
@@ -191,9 +197,11 @@ kbd {
 
 .brand {
   display: flex;
+  flex: none;
   align-items: baseline;
   gap: 8px;
   width: 196px;
+  white-space: nowrap;
   font-weight: 600;
   font-size: var(--fs-md);
   color: var(--text-strong);
@@ -220,6 +228,7 @@ kbd {
 
 .search {
   flex: 1;
+  min-width: 0;
   max-width: 520px;
   display: flex;
   align-items: center;
@@ -1492,6 +1501,9 @@ nav {
 }
 
 @media (max-width: 1020px) {
+  .brand-version {
+    display: none;
+  }
   .body {
     grid-template-columns: 64px 1fr;
   }
@@ -1771,6 +1783,11 @@ nav {
   gap: 8px;
 }
 
+.browser-default {
+  font-size: var(--fs-xs);
+  opacity: 0.7;
+}
+
 .setup-manual {
   margin-top: 4px;
   padding-top: 12px;
@@ -1874,4 +1891,23 @@ nav {
 .check-line input:disabled,
 .check-line select:disabled {
   opacity: 0.5;
+}
+
+.temp-files {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: -4px;
+  font-size: var(--fs-sm);
+}
+
+.temp-files-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.temp-files-line code {
+  word-break: break-all;
 }

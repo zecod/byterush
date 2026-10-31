@@ -107,6 +107,19 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+  // full screen hides the macOS traffic lights, so the top bar drops the room it keeps for them
+  const [fullscreen, setFullscreen] = useState(false);
+  useEffect(() => {
+    if (!isMac) return;
+    const win = getCurrentWindow();
+    const check = () => win.isFullscreen().then(setFullscreen).catch(() => {});
+    check();
+    const off = win.onResized(check);
+    return () => {
+      off.then((f) => f());
+    };
+  }, []);
+
   // live data
   useEffect(() => {
     // completions are grouped so a big batch shows one toast, not hundreds
@@ -338,7 +351,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className={`topbar ${isMac ? "mac" : ""}`} data-tauri-drag-region>
+      <header className={`topbar ${isMac ? "mac" : ""} ${fullscreen ? "fullscreen" : ""}`} data-tauri-drag-region>
         <div className="brand" data-tauri-drag-region>
           <Logo />
           byterush

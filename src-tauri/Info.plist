@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- the extension setup opens the browser's extensions page through the browser's AppleScript -->
+  <key>NSAppleEventsUsageDescription</key>
+  <string>Byterush opens your browser's extensions page so you can add the Byterush extension.</string>
+</dict>
+</plist>
