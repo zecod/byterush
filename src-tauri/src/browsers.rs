@@ -42,6 +42,7 @@ struct Kind {
     /// How the system names it as the default browser: Windows ProgId prefixes, macOS bundle ids
     /// (lowercase), and Linux .desktop names.
     progids: &'static [&'static str],
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     bundle_ids: &'static [&'static str],
     desktop: &'static [&'static str],
 }
@@ -209,12 +210,7 @@ fn default_handler() -> Option<DefaultHandler> {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x0800_0000;
     let out = std::process::Command::new("reg")
-        .args([
-            "query",
-            r"HKCU\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\UserChoice",
-            "/v",
-            "ProgId",
-        ])
+        .args(["query", r"HKCU\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\UserChoice", "/v", "ProgId"])
         .creation_flags(CREATE_NO_WINDOW)
         .output()
         .ok()?;
@@ -281,7 +277,9 @@ fn last_profile(user_data: &Path) -> Option<String> {
 fn running(browser: &Browser) -> bool {
     let Ok(out) = std::process::Command::new("ps").args(["-axo", "command="]).output() else { return false };
     let exe = browser.path.to_string_lossy();
-    String::from_utf8_lossy(&out.stdout).lines().any(|line| line.strip_prefix(exe.as_ref()).is_some_and(|rest| rest.is_empty() || rest.starts_with(' ')))
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .any(|line| line.strip_prefix(exe.as_ref()).is_some_and(|rest| rest.is_empty() || rest.starts_with(' ')))
 }
 
 /// Open `url` in the browser: in a new window of the copy already running, in the profile used
@@ -416,7 +414,9 @@ mod macos {
         let Ok(entries) = std::fs::read_dir(app.join("Contents/Frameworks")) else { return false };
         entries.flatten().any(|e| {
             let fw = e.path();
-            ["Versions/Current/Resources/chrome_100_percent.pak", "Resources/chrome_100_percent.pak"].iter().any(|rel| fw.join(rel).is_file())
+            ["Versions/Current/Resources/chrome_100_percent.pak", "Resources/chrome_100_percent.pak"]
+                .iter()
+                .any(|rel| fw.join(rel).is_file())
         })
     }
 

@@ -62,8 +62,11 @@ npm run tauri dev
 
 ## Checks
 
-CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request; run the ones your
-change touches before you push.
+CI (`.github/workflows/ci.yml`) runs on pull requests and on merges into `main`, and skips changes
+that touch only documentation. Each job runs only when its files changed, and Rust is checked on
+Windows and macOS for pull requests only (a merge into `main` re-checks on Linux): the repository
+is private, so Actions minutes are counted, ten per minute on macOS. *Actions → CI → Run workflow*
+runs everything. Run the checks your change touches before you push.
 
 ```bash
 # engine and app (from src-tauri/)
