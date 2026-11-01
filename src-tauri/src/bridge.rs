@@ -16,8 +16,8 @@ use std::time::Duration;
 
 pub const PORT: u16 = 51723;
 
-/// Unpacked extension (fixed by the `key` in its manifest). Store builds get their own id.
-pub const EXTENSION_IDS: &[&str] = &["alolkmfdhaifcmiheblachogjjenfdbk"];
+/// The unpacked extension (fixed by the `key` in its manifest) and the Chrome Web Store build.
+pub const EXTENSION_IDS: &[&str] = &["alolkmfdhaifcmiheblachogjjenfdbk", "hbchgmilklokpodkcjofbljjoalifpkc"];
 
 /// How long the browser waits for our first response before keeping the download itself.
 const VERDICT_TIMEOUT: Duration = Duration::from_secs(20);
