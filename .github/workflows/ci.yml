@@ -1,9 +1,31 @@
 name: CI
 
+# The repository is private, so Actions minutes are counted (macOS ten per minute, Windows two).
+# CI therefore runs on pull requests and on merges into main only, skips changes that touch
+# nothing it checks, runs each job only when its files changed, and builds Rust on Windows and
+# macOS for pull requests only: a merge into main re-checks on Linux alone, the rest having passed
+# on the pull request. "Run workflow" in the Actions tab runs everything.
+
 on:
   push:
-    branches: ["**"]
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "branding/**"
+      - "LICENSE"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/pull_request_template.md"
+      - ".github/dependabot.yml"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "branding/**"
+      - "LICENSE"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/pull_request_template.md"
+      - ".github/dependabot.yml"
   workflow_dispatch:
 
 permissions:
@@ -22,6 +44,43 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  changes:
+    name: What changed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      extension: ${{ steps.filter.outputs.extension }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            rust:
+              - "src-tauri/**"
+              - ".github/workflows/ci.yml"
+            frontend:
+              - "src/**"
+              - "index.html"
+              - "package.json"
+              - "package-lock.json"
+              - "tsconfig*.json"
+              - "vite.config.ts"
+              - "extension/**"
+              - "scripts/**"
+              - ".github/workflows/ci.yml"
+            extension:
+              - "extension/**"
+              - "src-tauri/src/bridge.rs"
+              - "src-tauri/examples/bridge_harness.rs"
+              - "scripts/extension-e2e.mjs"
+              - ".github/workflows/ci.yml"
+
   versions:
     name: Version consistency
     runs-on: ubuntu-latest
@@ -40,10 +99,13 @@ jobs:
 
   rust:
     name: Rust (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.rust == 'true' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-latest]
+        # every platform for a pull request or a manual run; a merge into main only on Linux
+        os: ${{ fromJSON(github.event_name == 'push' && '["ubuntu-22.04"]' || '["ubuntu-22.04", "windows-latest", "macos-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     defaults:
@@ -76,6 +138,8 @@ jobs:
 
   frontend:
     name: UI and extension
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -110,6 +174,9 @@ jobs:
 
   extension-e2e:
     name: Extension end-to-end
+    needs: changes
+    # the bridge and the harness it drives are Rust, so a Rust change runs it too
+    if: needs.changes.outputs.extension == 'true' || needs.changes.outputs.rust == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:

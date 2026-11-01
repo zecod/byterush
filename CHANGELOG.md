@@ -10,7 +10,7 @@ entries for people who use Byterush, not for people who read the diff.
 
 ## [Unreleased]
 
-## [0.3.1] - 2026-10-30
+## [0.3.1] - 2026-11-01
 
 ### Added
 
@@ -21,6 +21,11 @@ entries for people who use Byterush, not for people who read the diff.
 - A privacy page on the website, linked from the store listing: nothing leaves your computer.
 - The details panel says how many connections the server is refusing ("· 2 refused by the
   server") when a server allows fewer connections than asked for.
+- The setup guide finds the system's default browser and lists it first (macOS, Windows, Linux),
+  and opens the extensions page or the store in the browser already running, in its last-used
+  profile, in a new window.
+- Settings shows where partial files are kept and how much room they take, and can delete
+  leftovers.
 
 ### Changed
 
@@ -32,6 +37,8 @@ entries for people who use Byterush, not for people who read the diff.
   A 1 GB file from a server that allows two connections went from 117 s to 68 s.
 - Smaller app: only the Latin files of the IBM Plex Mono font are bundled, and the download list
   only re-renders the rows that changed.
+- macOS: the traffic lights sit centred in the top bar, never crowding the name on a narrow
+  window, and take no room in full screen.
 
 ### Fixed
 
@@ -45,6 +52,8 @@ entries for people who use Byterush, not for people who read the diff.
 - An absurd number typed into the speed limit no longer overflows into "no limit" (or a crash).
 - The clipboard watcher reads the clipboard only when its contents changed and the setting is on,
   and the progress loop sleeps while nothing is downloading.
+- Removing an unfinished download always deletes its partial data; it was left on disk unless
+  *delete files* was ticked.
 
 ## [0.3.0] - 2026-10-25
 
