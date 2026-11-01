@@ -29,6 +29,7 @@ entries for people who use Byterush, not for people who read the diff.
 
 ### Changed
 
+- macOS builds are for Apple Silicon only; Intel Macs can build from source.
 - A new interface font: the app and the extension popup use Geist instead of IBM Plex Mono.
   Numbers keep a fixed width, so speeds and progress do not jitter as they change.
 - Servers that cap connections per address (Hetzner's speed test, many file hosts): instead of

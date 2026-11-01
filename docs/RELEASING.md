@@ -64,9 +64,11 @@ suffixes in an extension version, and Windows Installer allows at most `255.255.
 
 ### Actions minutes
 
-The repository is private, so a release run is billed: about 250 minutes (Windows counts two
-per minute, macOS ten), an eighth of the 2,000 free ones a month. Release when there is something
-to release, and when a job fails prefer *Re-run failed jobs* to a fresh run.
+The repository is private, so a release run is billed: Windows counts two minutes per minute and
+macOS ten, out of 2,000 free ones a month. The macOS build is most of it, which is why there is one
+(Apple Silicon) and not two, and why the build caches its compiled dependencies: a release whose
+`Cargo.lock` didn't change compiles only the app itself. Release when there is something to
+release, and when a job fails prefer *Re-run failed jobs* to a fresh run.
 
 ## What the workflow does
 
@@ -82,11 +84,11 @@ to release, and when a job fails prefer *Re-run failed jobs* to a fresh run.
    | --- | --- |
    | `windows-latest` | `Byterush_X.Y.Z_x64-setup.exe` (NSIS), `Byterush_X.Y.Z_x64_en-US.msi` |
    | `macos-latest`, `aarch64-apple-darwin` | `Byterush_X.Y.Z_aarch64.dmg`, `Byterush_X.Y.Z_aarch64.app.tar.gz` |
-   | `macos-latest`, `x86_64-apple-darwin` | `Byterush_X.Y.Z_x64.dmg`, `Byterush_X.Y.Z_x64.app.tar.gz` |
    | `ubuntu-22.04` | `Byterush_X.Y.Z_amd64.AppImage`, `Byterush_X.Y.Z_amd64.deb`, `Byterush-X.Y.Z-1.x86_64.rpm` |
    | `ubuntu-22.04-arm` | `Byterush_X.Y.Z_aarch64.AppImage`, `Byterush_X.Y.Z_arm64.deb`, `Byterush-X.Y.Z-1.aarch64.rpm` |
 
-   The Linux builds run on Ubuntu 22.04 so the packages work with glibc 2.35 and newer. The arm64
+   macOS is built for Apple Silicon only; Intel Macs get no build (see *Actions minutes*). The
+   Linux builds run on Ubuntu 22.04 so the packages work with glibc 2.35 and newer. The arm64
    Linux build only runs while the repository is public: GitHub's arm64 runners are free for public
    repositories only, and in a private one the job would wait for a runner that never comes. A
    release made from a private repository has no arm64 Linux files, and the landing page says so
