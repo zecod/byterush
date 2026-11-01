@@ -671,14 +671,10 @@ impl Manager {
                 if !meta.is_file() {
                     continue;
                 }
-                files.push(TempFile {
-                    path: path.to_string_lossy().into_owned(),
-                    size: meta.len(),
-                    leftover: !owned.contains(&base),
-                });
+                files.push(TempFile { path: path.to_string_lossy().into_owned(), size: meta.len(), leftover: !owned.contains(&base) });
             }
         }
-        files.sort_by(|a, b| b.size.cmp(&a.size));
+        files.sort_by_key(|f| std::cmp::Reverse(f.size));
         let temp_dir = {
             let st = self.inner.state.lock().unwrap();
             let dir = st.settings.temp_dir.trim();
