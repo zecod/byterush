@@ -97,9 +97,12 @@ jobs:
           echo "public=$([ "$private" = false ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           [ "$private" = false ] || echo "::warning::Private repository: the Linux arm64 build is skipped (arm64 runners are free for public repositories only)."
 
-      # The build matrix: one job per installer set. Windows on Arm (an arm64 NSIS installer only,
-      # WiX can't make arm64 .msi packages) is not in it: it has never been built, so try it with a
-      # workflow_dispatch run on a test tag first, and add its file name to the publish job's list.
+      # The build matrix: one job per installer set. macOS is built for Apple Silicon only: Apple
+      # stopped selling Intel Macs in 2023, and on a private repository every macOS minute is billed
+      # ten times, so a second macOS build would double the cost of a release for few users.
+      # Windows on Arm (an arm64 NSIS installer only, WiX can't make arm64 .msi packages) is not in
+      # it either: it has never been built, so try it with a workflow_dispatch run on a test tag
+      # first, and add its file name to the publish job's list.
       - name: Build matrix
         id: matrix
         env:
@@ -108,7 +111,6 @@ jobs:
           include='[
             {"name": "Windows x64", "runner": "windows-latest", "target": "", "args": ""},
             {"name": "macOS Apple Silicon", "runner": "macos-latest", "target": "aarch64-apple-darwin", "args": "--target aarch64-apple-darwin"},
-            {"name": "macOS Intel", "runner": "macos-latest", "target": "x86_64-apple-darwin", "args": "--target x86_64-apple-darwin"},
             {"name": "Linux x64", "runner": "ubuntu-22.04", "target": "", "args": ""}
           ]'
           if [ "$PUBLIC" = true ]; then
@@ -321,7 +323,6 @@ jobs:
             "Byterush_${VERSION}_x64-setup.exe"
             "Byterush_${VERSION}_x64_en-US.msi"
             "Byterush_${VERSION}_aarch64.dmg"
-            "Byterush_${VERSION}_x64.dmg"
             "Byterush_${VERSION}_amd64.AppImage"
             "Byterush_${VERSION}_amd64.deb"
             "Byterush-${VERSION}-1.x86_64.rpm"
