@@ -181,10 +181,17 @@ jobs:
           node-version: 22
           cache: npm
 
-      # No Rust build cache here on purpose: release binaries are built from scratch.
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+
+      # The dependencies, compiled once per platform and kept while Cargo.lock and the toolchain
+      # don't change; a release build then compiles only the app itself. On a private repository
+      # that is most of the minutes a release costs, since macOS counts ten per minute.
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+          key: ${{ matrix.name }}
 
       - run: npm ci
 

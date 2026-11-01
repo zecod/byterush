@@ -1,13 +1,13 @@
-# Weekly dependency updates. Minor and patch updates of each ecosystem come as one grouped pull
-# request; major updates come one per dependency, since they may need code changes.
+# Monthly dependency updates: every pull request costs a CI run, and on a private repository the
+# minutes are counted. Minor and patch updates of each ecosystem come as one grouped pull request;
+# major updates come one per dependency, since they may need code changes.
 version: 2
 updates:
   - package-ecosystem: cargo
     directory: /src-tauri
     schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 10
+      interval: monthly
+    open-pull-requests-limit: 5
     commit-message:
       prefix: "deps(cargo)"
     groups:
@@ -17,9 +17,8 @@ updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 10
+      interval: monthly
+    open-pull-requests-limit: 5
     commit-message:
       prefix: "deps(npm)"
     groups:
@@ -29,8 +28,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
     commit-message:
       prefix: "deps(actions)"
     groups:

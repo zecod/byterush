@@ -62,6 +62,12 @@ suffixes in an extension version, and Windows Installer allows at most `255.255.
    [release page](https://github.com/zecod/byterush/releases/latest) and the
    [landing page](https://byterush.xyz/).
 
+### Actions minutes
+
+The repository is private, so a release run is billed: about 250 minutes (Windows counts two
+per minute, macOS ten), an eighth of the 2,000 free ones a month. Release when there is something
+to release, and when a job fails prefer *Re-run failed jobs* to a fresh run.
+
 ## What the workflow does
 
 1. **prepare**: checks that the tag is `vX.Y.Z`; when the run was started by hand for a tag that
@@ -189,7 +195,7 @@ a new package by hand after the release: `node scripts/extension-store.mjs` make
 ## How the landing page picks up a release
 
 The landing page (`landing/` in [zecod/byterush-frontend](https://github.com/zecod/byterush-frontend),
-deployed to GitHub Pages from there) asks the
+served at [byterush.xyz](https://byterush.xyz) by Vercel) asks the
 GitHub API for the [latest release](https://api.github.com/repos/zecod/byterush/releases/latest)
 in the visitor's browser and links each download button straight to the matching file. It
 recognizes files by tauri-action's default names (`Byterush_0.3.0_x64-setup.exe`,
