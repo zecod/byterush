@@ -129,8 +129,9 @@ Get the latest version from **[Releases](https://github.com/zecod/byterush/relea
 |---|---|
 | **Windows** 10 / 11 (x64) | `Byterush_<version>_x64-setup.exe` (installer) or `…_x64_en-US.msi` |
 | **macOS** 11+ Apple Silicon | `Byterush_<version>_aarch64.dmg` |
-| **macOS** 11+ Intel | `Byterush_<version>_x64.dmg` |
-| **Linux** x64 and arm64 | `.AppImage` (any distribution), `.deb` (Debian, Ubuntu), `.rpm` (Fedora, openSUSE) |
+| **Linux** x64 | `.AppImage` (any distribution), `.deb` (Debian, Ubuntu), `.rpm` (Fedora, openSUSE) |
+
+Intel Macs and ARM Linux have no ready-made build; [build from source](#build-from-source) there.
 
 Every release lists SHA-256 checksums in `SHA256SUMS.txt`. Until code signing is set up, macOS asks you to confirm the first launch (right-click the app → *Open*) and Windows SmartScreen shows *More info → Run anyway*.
 
