@@ -41,7 +41,8 @@ A browser downloads a file over **one** connection. Many servers, mirrors and CD
 - **Much faster on real servers.** A 961 MB file from archive.org took **6 min 54 s** on one connection and **13.5 s** with Byterush: **30× faster**. A 10.7 GB file took **9 min 34 s** in Chrome and **55 s** with Byterush. A 3.6 GB file took **33 s**; one connection was still at 97% after 32 minutes when the server dropped it. [Benchmarks ↓](#benchmarks)
 - **Nothing is lost.** Progress is synced to disk every few seconds; after a crash, a power cut or a reboot, downloads continue from where they were. An expired link? Start the download again in the browser and the same download carries on.
 - **Your browser's downloads, caught.** The Chrome / Edge extension hands every download over with the browser's cookies, so sites that need a login or a bot check still work. A **New download** window pops up over the browser, like IDM's: name, size, folder, the room left on that drive, then start, later or cancel. If Byterush can't get the very same file, the browser simply keeps it.
-- **Free and private.** MIT licensed, no account, no telemetry. The browser bridge only listens on `127.0.0.1`.
+- **Free and private.** MIT licensed, no account, no telemetry. The browser bridge only listens on `127.0.0.1`. The only request to a server of ours is the update check, which sends the version and the kind of system and install (and can be turned off).
+- **One-click updates.** A new version shows in the top bar and the settings, with what changed since yours; "update" downloads it, checks its signature, installs it and restarts.
 
 ## Benchmarks
 

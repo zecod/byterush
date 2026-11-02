@@ -46,5 +46,14 @@
     "resources": {
       "../extension/": "extension/"
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZEQkVGNkYzM0YwODJENUQKUldSZExRZy84L2ErYlVXQTUveFBiNFVOZ3liM0lNYVpFdW51NGtoV3k0MXMzY0JOaUlwSGdDWjYK",
+      "endpoints": ["https://byterush.xyz/api/update/{{target}}/{{arch}}/{{bundle_type}}/{{current_version}}"],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

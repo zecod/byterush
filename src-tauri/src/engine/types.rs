@@ -109,6 +109,9 @@ pub struct Settings {
     pub extension_browser: String,
     /// The suggestion to set up the browser extension was closed.
     pub setup_hint_dismissed: bool,
+    /// Ask byterush.xyz for a newer version when the app starts and every few hours (the UI does
+    /// it; see `updates.rs`). Off: only when asked in the settings.
+    pub check_updates: bool,
 }
 
 impl Default for Settings {
@@ -132,6 +135,7 @@ impl Default for Settings {
             extension_seen_ms: 0,
             extension_browser: String::new(),
             setup_hint_dismissed: false,
+            check_updates: true,
         }
     }
 }

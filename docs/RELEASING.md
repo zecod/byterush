@@ -82,9 +82,9 @@ release, and when a job fails prefer *Re-run failed jobs* to a fresh run.
 
    | Runner | Files |
    | --- | --- |
-   | `windows-latest` | `Byterush_X.Y.Z_x64-setup.exe` (NSIS), `Byterush_X.Y.Z_x64_en-US.msi` |
-   | `macos-latest`, `aarch64-apple-darwin` | `Byterush_X.Y.Z_aarch64.dmg`, `Byterush_X.Y.Z_aarch64.app.tar.gz` |
-   | `ubuntu-22.04` | `Byterush_X.Y.Z_amd64.AppImage`, `Byterush_X.Y.Z_amd64.deb`, `Byterush-X.Y.Z-1.x86_64.rpm` |
+   | `windows-latest` | `Byterush_X.Y.Z_x64-setup.exe` (NSIS), `Byterush_X.Y.Z_x64_en-US.msi`, and a `.sig` of each |
+   | `macos-latest`, `aarch64-apple-darwin` | `Byterush_X.Y.Z_aarch64.dmg`, `Byterush_X.Y.Z_aarch64.app.tar.gz` and its `.sig` |
+   | `ubuntu-22.04` | `Byterush_X.Y.Z_amd64.AppImage` and its `.sig`, `Byterush_X.Y.Z_amd64.deb`, `Byterush-X.Y.Z-1.x86_64.rpm` |
    | `ubuntu-22.04-arm` | `Byterush_X.Y.Z_aarch64.AppImage`, `Byterush_X.Y.Z_arm64.deb`, `Byterush-X.Y.Z-1.aarch64.rpm` |
 
    macOS is built for Apple Silicon only; Intel Macs get no build (see *Actions minutes*). The
@@ -136,9 +136,63 @@ Delete the variable (or set it to `false`) to go back to automatic publishing.
   `npm run version:set -- X.Y.Z`, commit, and tag the new commit.
 - **"no ## [X.Y.Z] section"**: add the section to `CHANGELOG.md`, commit, and tag the new commit.
 
+## Update signing
+
+Installed apps update themselves (see *How installed apps find an update* below), and they
+install an update only when it is signed with the project's updater key: the public half is
+`plugins.updater.pubkey` in `src-tauri/tauri.conf.json`, the private half is a repository secret.
+**A release can't be made without it**: the build stops at the *Update signing* step with "No
+TAURI_SIGNING_PRIVATE_KEY secret", since a release without signatures is one no installed app
+could update to.
+
+| Secret | Value |
+| --- | --- |
+| `TAURI_SIGNING_PRIVATE_KEY` | the contents of the private key file (`byterush-updater.key`) |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | its password; leave the secret out for a key made without one |
+
+```bash
+gh secret set TAURI_SIGNING_PRIVATE_KEY < ~/.tauri/byterush-updater.key
+```
+
+With the key, the build also writes a `.sig` next to every installer the app can update with
+(`_x64-setup.exe.sig`, `_x64_en-US.msi.sig`, `_aarch64.app.tar.gz.sig`, `_amd64.AppImage.sig`),
+and the publish job checks they are there.
+
+Keep the private key somewhere safe besides the secret (a password manager). **If it is lost, the
+installed apps can't be updated any more**: a new key means a new public key in the app, which
+people then have to install by hand once. If it leaks, anyone who can also get files onto
+byterush.xyz's answers could ship an update: make a new key (`npx tauri signer generate -w
+~/.tauri/byterush-updater.key`), put its public key in `tauri.conf.json`, replace the secret, and
+release.
+
+Builds from source don't need the key: `createUpdaterArtifacts` is off in `tauri.conf.json` and the
+workflow switches it on.
+
+## How installed apps find an update
+
+A few seconds after it starts, and every six hours (unless turned off under settings → behaviour),
+the app asks
+`https://byterush.xyz/api/update/{target}/{arch}/{bundle_type}/{current_version}`, an endpoint of
+[zecod/byterush-frontend](https://github.com/zecod/byterush-frontend) (`lib/updates.server.ts`). It
+reads the latest published release with its server-side token and answers 204 when the app is
+current, or the new version with the address of the right installer for that kind of install (the
+NSIS `.exe` for an NSIS install, the `.msi` for an MSI one, the `.app.tar.gz` on macOS, the AppImage
+on Linux), that installer's `.sig`, and the notes of every release since the asking version, for the
+app's "what's new". The address is `/api/update/file/vX.Y.Z/<file>` on the site, which redirects to
+GitHub's short-lived link, so the repository can stay private.
+
+So publishing a release is all it takes: within a few minutes (the site caches the release for 5)
+every running app shows the update. A draft is invisible to it. A release that lacks the signature
+for some kind of install is simply not offered to those installs. `.deb` and `.rpm` installs are
+offered updates only once a release carries signed `.deb`/`.rpm` files.
+
+Release notes are the `## [X.Y.Z]` section of `CHANGELOG.md`, shown to users in the app: write
+them for people, with Keep a Changelog's `### Added` / `### Changed` / `### Fixed` headings (the
+app counts the items under them: "2 new · 3 fixes").
+
 ## Code signing
 
-The pipeline works without any secrets. Then:
+The pipeline works without any secrets other than the update key. Then:
 
 - **macOS** builds are ad-hoc signed (Apple Silicon refuses to run apps without any signature) but
   not notarized, so on first launch macOS says it can't verify the developer: users open

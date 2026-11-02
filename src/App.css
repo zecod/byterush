@@ -1911,3 +1911,206 @@ nav {
 .temp-files-line code {
   word-break: break-all;
 }
+
+/* ---------- updates ---------- */
+/* in the top bar, next to the settings, while a new version is on offer */
+.chip.update-chip {
+  background: var(--interactive);
+  border-color: var(--interactive);
+  color: hsl(0, 5%, 12%);
+  font-weight: 500;
+}
+
+.chip.update-chip:hover {
+  filter: brightness(0.97);
+}
+
+.chip.update-chip.failed {
+  background: transparent;
+  border-color: var(--err);
+  color: var(--err);
+}
+
+/* the first thing in the settings: the version, a newer one, the update button */
+.update-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-weak);
+  border-radius: var(--radius);
+  background: var(--bg-weak);
+}
+
+.update-card.available {
+  background: var(--interactive-weaker);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border-weak));
+  cursor: pointer;
+}
+
+.update-card.available:hover {
+  border-color: var(--border);
+}
+
+.update-card.available.failed {
+  border-color: color-mix(in srgb, var(--err) 45%, var(--border-weak));
+}
+
+.update-card:focus-visible {
+  outline: 2px solid var(--border);
+  outline-offset: 1px;
+}
+
+.update-card-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.update-card-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border-weak);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--icon);
+}
+
+.update-card-icon.ok {
+  color: var(--ok);
+}
+
+.update-card.available .update-card-icon {
+  background: var(--interactive);
+  border-color: var(--interactive);
+  color: hsl(0, 5%, 12%);
+}
+
+.update-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--fs-xs);
+}
+
+.update-card-text b {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.update-card-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.update-card .error-text,
+.modal-body > .error-text {
+  margin: 0;
+  font-size: var(--fs-xs);
+}
+
+.update-card-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.spinning {
+  animation: spin 0.9s linear infinite;
+}
+
+/* "what's new": the notes of every release since the running one */
+.whats-new-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--fs-xs);
+}
+
+.whats-new-head b {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.whats-new {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.whats-new-release h3 {
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-weak);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.whats-new-release h3 .muted {
+  font-weight: 400;
+}
+
+.notes h4 {
+  margin: 12px 0 6px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-weak);
+}
+
+.notes h4:first-child {
+  margin-top: 0;
+}
+
+.notes ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notes li {
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.notes li::marker {
+  color: var(--text-weak);
+}
+
+.notes li.sub {
+  margin-left: 16px;
+}
+
+.notes p {
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
+.notes code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  padding: 0 4px;
+  border: 1px solid var(--border-weak);
+  border-radius: 3px;
+  background: var(--bg-weak);
+  color: var(--text-strong);
+}
+
+.notes a {
+  color: var(--text-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
