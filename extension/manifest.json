@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Byterush: Download Up to 30× Faster",
   "short_name": "Byterush",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Hands browser downloads to the Byterush app: parallel connections, resume, and your cookies so protected sites keep working.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAo5kDk9wO+pKu02hlSBEg3DBiRR0znbqhLhex6M/8MPRS7zMrv8B101IR0j/uHl4ZS4rmrOpnitWD73DX0vhX/3pekNMvWJ2gepFnqaf/uGhXtZaDrIvZPWfSuP1lnrEncZREfDO867kboIKnCMrJ02iMBAowC0JvfZNFmRJ+bVEAgx3fLAjKAx4VqUGU+yBGiTZgN3iXUxFWs/PXvFahWXnmHSjnuwFNvRgn1I0lsNkCEzXhbpHN+7CmSHkBuBQKlhfvrJJg/Oqu/xt3WBcwGahBmdRxaIKIKxJ5BqRuATuh7wpMTd2uw3MBJDqiper4P2nrb+fVsLkT1tncENV0gQIDAQAB",
   "minimum_chrome_version": "116",

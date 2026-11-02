@@ -1,6 +1,6 @@
 [package]
 name = "byterush"
-version = "0.3.2"
+version = "0.3.3"
 description = "Byterush - a fast segmented download manager"
 authors = ["zecod"]
 license = "MIT"
