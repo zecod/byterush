@@ -10,6 +10,16 @@ entries for people who use Byterush, not for people who read the diff.
 
 ## [Unreleased]
 
+### Added
+
+- Byterush tells you when a new version is out and installs it in one click. A button in the
+  top bar and a card at the top of the settings show the new version; "what's new" lists what
+  changed in every release since yours. "Update" downloads it, checks that it is signed by
+  Byterush, installs it and opens the new version. Downloads that were running pause for the
+  restart and continue after it. Byterush looks a few seconds after it starts and every six
+  hours, sending byterush.xyz only its version and the kind of system and install; turn that off
+  under settings → behaviour. Coming from 0.3.2 or older, install this version once by hand.
+
 ## [0.3.2] - 2026-11-01
 
 ### Fixed

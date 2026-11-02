@@ -3,14 +3,20 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { FolderOpenIcon, PuzzleIcon } from "@hugeicons/core-free-icons";
 import type { BridgeStatus, Settings, TempFiles } from "../api";
 import { api, formatBytes, formatDate } from "../api";
+import type { Updates } from "../updates";
 import { ExtensionSetup } from "./ExtensionSetup";
 import { Icon } from "./icons";
 import { Modal } from "./Modal";
+import { UpdateCard } from "./Updates";
 
 interface Props {
   settings: Settings;
   onSave: (s: Settings) => void;
   onClose: () => void;
+  updates: Updates;
+  /** The running version. */
+  version: string;
+  onWhatsNew: () => void;
 }
 
 function FolderField({ label, value, placeholder, onChange, hint }: { label: string; value: string; placeholder?: string; onChange: (v: string) => void; hint?: string }) {
@@ -154,13 +160,21 @@ function TempFilesInfo() {
   );
 }
 
-export function SettingsDialog({ settings, onSave, onClose }: Props) {
+export function SettingsDialog({ settings, onSave, onClose, updates, version, onWhatsNew }: Props) {
   const [s, setS] = useState<Settings>(settings);
   const set = <K extends keyof Settings>(key: K, value: Settings[K]) => setS((prev) => ({ ...prev, [key]: value }));
+  // opening the settings looks for a new version when none was looked for yet, unless the checks
+  // are turned off: then only "check now" asks
+  const { state, check } = updates;
+  useEffect(() => {
+    if (state.phase === "idle" && settings.check_updates) check();
+  }, []);
 
   return (
     <Modal title="settings" onClose={onClose} width={600}>
       <div className="settings">
+        <UpdateCard updates={updates} version={version} onOpen={onWhatsNew} />
+
         <h3>01 · storage</h3>
         <FolderField label="download folder" value={s.download_dir} onChange={(v) => set("download_dir", v)} />
         <FolderField
@@ -219,6 +233,10 @@ export function SettingsDialog({ settings, onSave, onClose }: Props) {
         <label className="check">
           <input type="checkbox" checked={s.monitor_clipboard} onChange={(e) => set("monitor_clipboard", e.target.checked)} />
           <span>offer to download links copied to the clipboard</span>
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={s.check_updates} onChange={(e) => set("check_updates", e.target.checked)} />
+          <span>look for new versions when byterush starts (asks byterush.xyz, sending only the version and the system)</span>
         </label>
         <div className="field">
           <span>theme</span>

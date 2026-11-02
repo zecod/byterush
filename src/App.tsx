@@ -32,6 +32,8 @@ import { ConfirmDelete } from "./components/Modal";
 import { RefreshDialog } from "./components/RefreshDialog";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { type Filter, matches, Sidebar } from "./components/Sidebar";
+import { UpdateChip, WhatsNew } from "./components/Updates";
+import { useUpdates } from "./updates";
 import "./App.css";
 
 interface Toast {
@@ -68,6 +70,7 @@ export default function App() {
   const [confirmIds, setConfirmIds] = useState<string[] | null>(null);
   const [refreshFor, setRefreshFor] = useState<Download | null>(null);
   const [showSetup, setShowSetup] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [browsers, setBrowsers] = useState<Browser[]>([]);
   const [extensionSeen, setExtensionSeen] = useState(false);
   const [version, setVersion] = useState("");
@@ -204,6 +207,9 @@ export default function App() {
 
   const downloads = useMemo(() => [...store.current.values()], [rev]);
 
+  // a newer version: checked a few seconds after the start and every few hours (unless turned off)
+  const updates = useUpdates(settings?.check_updates ?? false);
+
   // until the extension first checks in, suggest setting it up, naming the browsers found here
   const suggestSetup = !!settings && settings.browser_integration && !settings.extension_seen_ms && !settings.setup_hint_dismissed && !extensionSeen;
   useEffect(() => {
@@ -303,7 +309,7 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
       const typing = (e.target as HTMLElement).closest("input, textarea, select");
-      if (addUrl !== null || showSettings || showSetup || confirmIds || refreshFor) return;
+      if (addUrl !== null || showSettings || showSetup || showWhatsNew || confirmIds || refreshFor) return;
       const key = e.key.toLowerCase();
       if (mod && key === "n") {
         e.preventDefault();
@@ -363,6 +369,7 @@ export default function App() {
           <kbd>{shortcut("f")}</kbd>
         </div>
         <div className="topbar-right">
+          <UpdateChip updates={updates} onOpen={() => setShowWhatsNew(true)} />
           <button className={`chip ${limiterOn ? "on" : ""}`} onClick={toggleLimiter} title={limiterOn ? "Speed cap on — click to remove" : "Turn on the speed cap"}>
             <Icon icon={DashboardSpeed01Icon} size={14} /> {limiterOn ? `${settings?.speed_limit_kbps} KB/s` : "no cap"}
           </button>
@@ -496,7 +503,25 @@ export default function App() {
           onAdded={(ids) => ids[0] && focusDownload(ids[0])}
         />
       )}
-      {showSettings && settings && <SettingsDialog settings={settings} onSave={saveSettings} onClose={() => setShowSettings(false)} />}
+      {showSettings && settings && (
+        <SettingsDialog
+          settings={settings}
+          onSave={saveSettings}
+          onClose={() => setShowSettings(false)}
+          updates={updates}
+          version={version}
+          onWhatsNew={() => setShowWhatsNew(true)}
+        />
+      )}
+      {showWhatsNew && updates.info && (
+        <WhatsNew
+          updates={updates}
+          info={updates.info}
+          activeCount={activeCount}
+          resumeOnStartup={settings?.resume_on_startup ?? true}
+          onClose={() => setShowWhatsNew(false)}
+        />
+      )}
       {showSetup && settings && (
         <ExtensionSetup
           settings={settings}
