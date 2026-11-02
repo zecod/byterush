@@ -1,6 +1,7 @@
 pub mod bridge;
 pub mod browsers;
 pub mod engine;
+pub mod updates;
 
 use engine::{AddRequest, Confirmation, DiskSpace, DownloadView, Manager, ProbeInfo, Settings};
 use serde::Serialize;
@@ -500,6 +501,7 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         // closing the "New download" window keeps its download, paused for later; the window itself
         // stays, hidden, for the next one
         .on_window_event(|window, event| {
@@ -532,6 +534,7 @@ pub fn run() {
             spawn_progress_loop(app.handle().clone(), manager.clone(), resync.0.clone());
             app.manage(resync);
             app.manage(AskState::default());
+            app.manage(updates::PendingUpdate::default());
 
             // tell the UI about taken-over downloads; one that waits for the user is shown in the "New
             // download" window, the others flash the taskbar instead of stealing focus. Off the
@@ -609,6 +612,8 @@ pub fn run() {
             installed_browsers,
             open_in_browser,
             open_extensions_page,
+            updates::check_update,
+            updates::install_update,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

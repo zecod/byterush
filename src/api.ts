@@ -59,6 +59,8 @@ export interface Settings {
   extension_seen_ms: number;
   extension_browser: string;
   setup_hint_dismissed: boolean;
+  /** Look for a newer version at the start and every few hours (see updates.ts). */
+  check_updates: boolean;
 }
 
 export interface ProbeInfo {

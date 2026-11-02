@@ -268,10 +268,33 @@ jobs:
           $conf | ConvertTo-Json -Depth 20 | Set-Content -Path $file -Encoding utf8
           Write-Output "Signing with certificate $($cert.Subject) ($($cert.Thumbprint))"
 
+      # Required: the updater's signing key. Each installer the app can update itself with gets a
+      # .sig made with it, and the app installs an update only when that signature matches the
+      # public key in tauri.conf.json. The setting is switched on here, not in tauri.conf.json, so
+      # builds from source work without the key. See docs/RELEASING.md, "Update signing".
+      - name: Update signing
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::No TAURI_SIGNING_PRIVATE_KEY secret: the installed apps could not update themselves to this release. See docs/RELEASING.md, \"Update signing\"."
+            exit 1
+          fi
+          node -e '
+            const fs = require("fs");
+            const file = "src-tauri/tauri.conf.json";
+            const conf = JSON.parse(fs.readFileSync(file, "utf8"));
+            conf.bundle.createUpdaterArtifacts = true;
+            fs.writeFileSync(file, JSON.stringify(conf, null, 2) + "\n");
+          '
+
       - name: Build and upload to the draft release
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # empty for a key made without a password
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           releaseId: ${{ needs.prepare.outputs.release_id }}
           args: ${{ matrix.args }}
@@ -327,9 +350,15 @@ jobs:
             "Byterush_${VERSION}_amd64.deb"
             "Byterush-${VERSION}-1.x86_64.rpm"
             "byterush-extension-${VERSION}.zip"
+            # the updater's signatures: byterush.xyz offers an installed app the update only with them
+            "Byterush_${VERSION}_x64-setup.exe.sig"
+            "Byterush_${VERSION}_x64_en-US.msi.sig"
+            "Byterush_${VERSION}_aarch64.app.tar.gz"
+            "Byterush_${VERSION}_aarch64.app.tar.gz.sig"
+            "Byterush_${VERSION}_amd64.AppImage.sig"
           )
           if [ "$ARM64_LINUX" = true ]; then
-            required+=("Byterush_${VERSION}_aarch64.AppImage" "Byterush_${VERSION}_arm64.deb" "Byterush-${VERSION}-1.aarch64.rpm")
+            required+=("Byterush_${VERSION}_aarch64.AppImage" "Byterush_${VERSION}_aarch64.AppImage.sig" "Byterush_${VERSION}_arm64.deb" "Byterush-${VERSION}-1.aarch64.rpm")
           fi
           missing=0
           for name in "${required[@]}"; do
