@@ -10,6 +10,12 @@ entries for people who use Byterush, not for people who read the diff.
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-11-13
+
+### Changed
+
+- The installers and the app name zecod, who makes Byterush, as its author.
+
 ## [0.3.3] - 2026-11-02
 
 ### Added
@@ -173,9 +179,10 @@ entries for people who use Byterush, not for people who read the diff.
 - Browser extension for Chrome and Edge that hands downloads over to the app together with the
   browser session (cookies, user-agent, referer).
 
-[Unreleased]: https://github.com/zecod/byterush/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/zecod/byterush/compare/v0.3.4...HEAD
+[0.3.4]: https://github.com/zecod/byterush/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/zecod/byterush/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/zecod/byterush/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/zecod/byterush/compare/v0.3.0...v0.3.1
-[0.3.0]: https://github.com/zecod/byterush/compare/159ef6f311413b1bcee12d23a895d803621515f4...v0.3.0
-[0.2.0]: https://github.com/zecod/byterush/tree/159ef6f311413b1bcee12d23a895d803621515f4
+[0.3.0]: https://github.com/zecod/byterush/compare/a10a6fa994c97bd89196a533fab84d32ec2f66e6...v0.3.0
+[0.2.0]: https://github.com/zecod/byterush/tree/a10a6fa994c97bd89196a533fab84d32ec2f66e6
